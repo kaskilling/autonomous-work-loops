@@ -21,9 +21,10 @@ wall() {
 
 prompt="Load the autonomous-work-loops skill and run exactly one ${role} tick in this repository, following its tick-mode instructions. Reconstruct all state from host (GitHub labels + marker comments) and .agent-loops/ before acting. Do one unit of work and exit. Do not ask questions; record any blocker as a marker/evidence note."
 
-model_arg=()
-[ -n "$model" ] && model_arg=(-c "model=\"$model\"")
-
 cd "$repo"
-wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' \
-  "${model_arg[@]}" "$prompt"
+# Note: empty-array expansion under `set -u` breaks on bash 3.2 (macOS), so branch instead.
+if [ -n "$model" ]; then
+  wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c "model=\"$model\"" "$prompt"
+else
+  wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' "$prompt"
+fi
