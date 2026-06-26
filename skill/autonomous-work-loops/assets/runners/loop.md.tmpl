@@ -1,9 +1,16 @@
-# /loop runner template
+# /loop runner template (Claude Code)
 
-Render one recurring invocation per role:
+`/loop` re-invokes a PROMPT on an interval. Skills load by prompt, not by `--skill/--role` flags.
+Create one `/loop` entry per role:
 
 ```text
-/loop every {{interval}}: timeout {{timeout_minutes}}m {{agent_cmd}} --skill autonomous-work-loops --role {{role}} --repo {{repo_path}}
+/loop every {{interval}}: Load the autonomous-work-loops skill and run one {{role}} tick in {{repo_path}}, following tick-mode. Reconstruct state from host + .agent-loops/. Do one unit of work and exit.
 ```
 
-Use roles `implementer`, `reviewer`, and `fixer`. The timeout is the external wall.
+Roles: `implementer`, `reviewer`, `fixer`.
+
+The external cost wall (ADR-0007): `/loop` does not impose a per-iteration OS timeout, so either
+(a) wrap the underlying agent call in `timeout`/`gtimeout` if your `/loop` shells out, or
+(b) rely on the tick's own state-derived budget checks plus a low `max_runtime_minutes_per_loop`
+that the tick honors and the next iteration enforces. Prefer the `cron.sh`/`codex.sh` runners
+when a hard OS-level wall is required.

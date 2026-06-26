@@ -28,6 +28,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTONOMOUS_WORK_LOOPS_BOT_TOKEN }}
         run: |
-          {{agent_cmd}} --skill autonomous-work-loops --role "${{ inputs.role || '{{role}}' }}"
+          role="${{ inputs.role || '{{role}}' }}"
+          # Skills load by PROMPT, not flags. The job timeout-minutes above is the cost wall.
+          {{agent_cmd}} "Load the autonomous-work-loops skill and run one ${role} tick in this repository, following tick-mode. Reconstruct state from host + .agent-loops/. Do one unit of work and exit. Do not ask questions."
 
 # Use a scoped bot token. Do not silently inherit a maintainer's local credentials.

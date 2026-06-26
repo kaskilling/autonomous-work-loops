@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Codex tick runner for autonomous-work-loops.
+# One invocation = one tick of one role. The scheduler (cron) calls this repeatedly.
+# Render {{repo_path}}, {{role}}, {{timeout_minutes}}, {{model}} at bootstrap.
+set -euo pipefail
+
+repo="{{repo_path}}"
+role="{{role}}"
+mins="{{timeout_minutes}}"
+model="{{model}}"   # empty = codex default; set for cross-model review
+
+# --- external cost wall (ADR-0007). Prefer gtimeout/timeout; else shell fallback. ---
+wall() {
+  if command -v timeout  >/dev/null 2>&1; then timeout  "${mins}m" "$@"; return; fi
+  if command -v gtimeout >/dev/null 2>&1; then gtimeout "${mins}m" "$@"; return; fi
+  # portable fallback: run in background, kill after the wall elapses
+  ( "$@" ) & local pid=$!
+  ( sleep "$((mins*60))" && kill -TERM "$pid" 2>/dev/null ) & local killer=$!
+  wait "$pid"; local rc=$?; kill "$killer" 2>/dev/null || true; return $rc
+}
+
+prompt="Load the autonomous-work-loops skill and run exactly one ${role} tick in this repository, following its tick-mode instructions. Reconstruct all state from host (GitHub labels + marker comments) and .agent-loops/ before acting. Do one unit of work and exit. Do not ask questions; record any blocker as a marker/evidence note."
+
+model_arg=()
+[ -n "$model" ] && model_arg=(-c "model=\"$model\"")
+
+cd "$repo"
+wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' \
+  "${model_arg[@]}" "$prompt"

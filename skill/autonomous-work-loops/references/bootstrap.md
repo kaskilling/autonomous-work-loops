@@ -13,7 +13,7 @@ Bootstrap mode sets up `.agent-loops/` in the target repository and exits. It di
    - `permissive` for solo private repos.
    - `strict` for public or multi-contributor repos.
 5. Build `trusted_actors` from maintainers, owners, or explicit write-access dispatchers. Leave it editable.
-6. Choose runner surface: local cron, `/loop`, or GitHub Actions schedule. Record credential implications.
+6. Choose runner surface and render from `assets/runners/`: `codex.sh.tmpl` (default for a Codex-driven local loop), `cron.sh.tmpl` (generic agent), `loop.md.tmpl` (Claude Code `/loop`), or `github-actions.yml.tmpl` (scheduled CI). Headless agents load the skill by PROMPT, not by `--skill/--role` flags. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications.
 7. Render `.agent-loops/config.yaml`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
 
 ## Setup Model
