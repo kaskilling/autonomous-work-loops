@@ -22,9 +22,12 @@ wall() {
 prompt="Load the autonomous-work-loops skill and run exactly one ${role} tick in this repository, following its tick-mode instructions. Reconstruct all state from host (GitHub labels + marker comments) and .agent-loops/ before acting. Do one unit of work and exit. Do not ask questions; record any blocker as a marker/evidence note."
 
 cd "$repo"
+# network_access=true is REQUIRED: tick mode must reach the host (gh/git to GitHub).
+# Without it codex's workspace-write sandbox blocks DNS and the tick can do no host work.
 # Note: empty-array expansion under `set -u` breaks on bash 3.2 (macOS), so branch instead.
+net='sandbox_workspace_write.network_access=true'
 if [ -n "$model" ]; then
-  wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c "model=\"$model\"" "$prompt"
+  wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c "$net" -c "model=\"$model\"" "$prompt"
 else
-  wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' "$prompt"
+  wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c "$net" "$prompt"
 fi
