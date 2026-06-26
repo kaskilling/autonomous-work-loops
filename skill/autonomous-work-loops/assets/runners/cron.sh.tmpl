@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -eu
+
+# Render {{repo_path}}, {{agent_cmd}}, {{role}}, and {{timeout_minutes}} during bootstrap.
+cd "{{repo_path}}"
+timeout "{{timeout_minutes}}m" {{agent_cmd}} --skill autonomous-work-loops --role "{{role}}"

@@ -1,0 +1,33 @@
+name: autonomous-work-loops
+
+on:
+  schedule:
+    - cron: "{{cron}}"
+  workflow_dispatch:
+    inputs:
+      role:
+        description: "implementer, reviewer, or fixer"
+        required: true
+        default: "reviewer"
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: {{timeout_minutes}}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.AUTONOMOUS_WORK_LOOPS_BOT_TOKEN }}
+      - name: Run one loop tick
+        env:
+          GH_TOKEN: ${{ secrets.AUTONOMOUS_WORK_LOOPS_BOT_TOKEN }}
+        run: |
+          {{agent_cmd}} --skill autonomous-work-loops --role "${{ inputs.role || '{{role}}' }}"
+
+# Use a scoped bot token. Do not silently inherit a maintainer's local credentials.

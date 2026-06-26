@@ -1,0 +1,9 @@
+# /loop runner template
+
+Render one recurring invocation per role:
+
+```text
+/loop every {{interval}}: timeout {{timeout_minutes}}m {{agent_cmd}} --skill autonomous-work-loops --role {{role}} --repo {{repo_path}}
+```
+
+Use roles `implementer`, `reviewer`, and `fixer`. The timeout is the external wall.
