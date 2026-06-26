@@ -30,13 +30,15 @@ Positioning: *"ralph-loop makes one agent retry. autonomous-work-loops runs a re
 
 ## 3. Where the skill physically lives (three consumers, separate copies)
 
-This machine has three independent skill directories — **not symlinks, separate copies**:
+This machine has three skill directories, and the convention is **`~/.agents/skills/` is canonical; `~/.claude/skills/` and `~/.codex/skills/` symlink into it** (per-skill symlinks):
 
-- `~/.claude/skills/` — Claude Code
-- `~/.codex/skills/` — Codex CLI
-- `~/.agents/skills/` — shared/other agents
+- `~/.agents/skills/<skill>` — the real directory (source of truth)
+- `~/.claude/skills/<skill>` → `~/.agents/skills/<skill>` (Claude Code)
+- `~/.codex/skills/<skill>` → `~/.agents/skills/<skill>` (Codex CLI)
 
-Implication: the skill must be **tool-agnostic in its content** (it already is per ADR-0001 model-agnosticism), and distribution must place it in all three (or be installed via a mechanism that does). The skill body must not assume "you are Claude" — it speaks in roles and host operations.
+(For repos that own a skill, the canonical entry may instead symlink to the repo, e.g. `autonomous-work-loops` → its repo's `skill/` dir, and `maestro-android-cli` → a project repo.)
+
+Implication: install by placing the real skill once (in its repo or `.agents`) and symlinking it into all three dirs — `install.sh` does the copy variant for portability to machines without this convention. The skill must be **tool-agnostic in its content** (it already is per ADR-0001 model-agnosticism); the body must not assume "you are Claude" — it speaks in roles and host operations.
 
 Frontmatter compatibility: both Claude and Codex read `name` + `description`. Codex additionally supports `metadata.short-description` and an `agents/openai.yaml`. We include the Codex extras (ignored harmlessly by Claude) so one folder serves all three.
 
