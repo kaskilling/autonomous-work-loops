@@ -52,8 +52,10 @@ ready  →  in-progress  →  needs-fix  →  (back to in-progress)  →  ready-
 
 Under the hood, an external scheduler (cron) fires the runner scripts. From the real run:
 - **Implementer** (within ~2 min): claimed the issue, created `loop/impl/issue-1`, wrote the feature **and its own tests**, ran proof (`9 passed`), opened a PR. Issue flips `ready → in-progress`.
-- **Reviewer**: re-ran proof independently, found no defect, but **refused to rubber-stamp the first draft** — posted a precise `needs-fix` marker demanding one hardening cycle. PR → `needs-fix`.
-- **Fixer**: ran the hardening pass, confirmed proof, posted a `fixed` marker. PR → `in-progress`.
+- **Reviewer**: re-ran proof independently and inspected the diff against the issue's acceptance criteria. If it finds a blocking defect → `needs-fix`; if the head is clean and proof passed → straight to `ready-for-human`.
+- **Fixer** (only when there was a `needs-fix`): addresses the feedback, re-runs proof, returns the PR for re-review.
+
+> Note: the very first test run used an earlier rule that *forced* one fixer cycle even on a clean PR. We dropped that (it was ceremony — the fixer changed nothing and the reviewer then approved identical code). A clean, proven PR now converges in one implementer + one reviewer tick.
 - **Reviewer** again: clean head + proof passed + one fix cycle exists → **`ready-for-human`**.
 
 Every step leaves a machine-readable marker comment on the PR (`<!-- loop:reviewer v=1 reviewed_sha=... verdict=... -->`) so the next tick — and you — can see exactly what happened and why.
@@ -73,7 +75,7 @@ You come back to a PR labeled `ready-for-human` that is **proven (tests ran and 
 ## What surprised me (honest notes)
 
 - **It writes its own tests.** Given an issue that said "prove it with pytest," the implementer authored 3 new tests, not just the feature.
-- **The anti-rubber-stamp rule is the star.** Watching the reviewer find nothing wrong yet *still* refuse to converge on pass 1 is the whole value proposition made visible.
+- **Proof is the real gate, not ceremony.** The first build had the reviewer force a fix cycle even on a clean PR; watching the fixer change nothing taught us that forced motion ≠ rigor. The honest value is: the tests actually ran and passed, and an adversarial (ideally cross-model) reviewer read the diff — convergence is earned by proof, not by counting rounds.
 - **It's resilient to environment friction.** When codex's sandbox blocked `.git` writes, the agent self-healed by working from a temp clone and logged it as evidence — no human intervention.
 - **Codex sandbox + browser tests don't mix** on a policy-locked machine. If your proof is Playwright/Chromium, run the loop via Claude or in CI, not codex-in-sandbox. Unit/build proofs are perfect for codex.
 

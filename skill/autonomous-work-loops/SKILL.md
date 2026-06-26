@@ -36,5 +36,5 @@ Use **Tick mode** when the user or runner gives a role: `implementer`, `reviewer
 - Stay in V1 scope: no Maintainer Loop, no evidence consolidation, no Core Memory regeneration, no autonomous playbook mutation, no loopctl, no non-GitHub adapter.
 - Use the named host operations from `references/adapter-github.md`; do not invent host-specific steps in playbooks.
 - Treat proof as a precondition for autonomous convergence. If proof is absent, route to `unproven` and a human gate.
-- Reviewer may mark `ready-for-human` only after proof passes, the head is clean, and at least one fixer cycle has run.
+- Reviewer may mark `ready-for-human` once proof passes and the head has no blocking defects. A clean first pass converges immediately — no fix cycle is forced when there is nothing to fix.
 - Append evidence in the V2-compatible inbox schema, but only suggest playbook changes by tiny human-reviewed PR.

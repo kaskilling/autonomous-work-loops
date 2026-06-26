@@ -1,6 +1,6 @@
 # Same-model review must be adversarial and proof-anchored; no-proof + same-model never auto-converges
 
-The Implementer and Reviewer are, by default, the same model running the same skill in different roles. An LLM reviewing near-identical-model output tends toward self-agreement, which would make the review→fix cycle (the value per ADR-0003) theatre. V1's answer:
+The Implementer and Reviewer are, by default, the same model running the same skill in different roles. An LLM reviewing near-identical-model output tends toward self-agreement, which would make review theatre. (This same-model risk was originally the justification for ADR-0003's mandatory fix cycle; that proxy was dropped — the antidotes below address the risk directly.) V1's answer:
 
 - **Adversarial framing.** The Reviewer playbook forces disconfirmation: assume defects exist, find what's wrong, verify diff claims don't lie.
 - **Proof anchor.** The Reviewer is anchored to objective signal it cannot rubber-stamp away — proof results (ADR-0005), changed-files, actual diff inspection — not vibes. Even if framing fails, there is a hard floor: "did proof actually pass."

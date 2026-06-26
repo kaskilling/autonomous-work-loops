@@ -6,8 +6,8 @@ Convergence is marker-derived. A tick never relies on remembered prior outcomes.
 
 ## Outcomes
 
-- `ready-for-human`: proof passed, current head has no blocking defects, and at least one fixer cycle has run.
-- `needs-fix`: proof failed, blocking defects exist, or the mandatory first hardening cycle has not run.
+- `ready-for-human`: proof passed and the current head has no blocking defects. A clean first review converges immediately.
+- `needs-fix`: proof failed or blocking defects exist.
 - `did-not-converge`: cycle cap reached with blocking defects still unresolved.
 - `unproven`: proof is absent, newly agent-authored proof has not been human accepted, or objective proof cannot be run.
 - `stalled`: repeated external-wall kills exceeded `kill_retries`.
@@ -16,10 +16,10 @@ Convergence is marker-derived. A tick never relies on remembered prior outcomes.
 
 Read latest markers with `read_markers`.
 
+- A clean, proven first pass converges with no fix cycle. Cycles happen only when the reviewer finds real blocking defects.
 - Reviewer creates or updates the cycle when it sends work to Fixer.
 - Fixer preserves the current cycle when addressing feedback.
-- A completed fixer marker proves at least one fix cycle ran.
-- `max_reviewer_fixer_cycles_per_change` is the hard cap. Never exceed it.
+- `max_reviewer_fixer_cycles_per_change` is the hard cap on how many review→fix rounds a change may take before escalation. Never exceed it.
 
 At cap:
 

@@ -36,9 +36,9 @@ Write a Bootstrap Report in the target repo or in the conversation. Include:
 
 1. A trusted actor applies `ready` to issue `123`.
 2. Implementer tick calls `claim_work`, atomically creates `loop/impl/issue-123`, sets `in-progress`, implements one unit, runs configured proof, posts an implementer marker, and calls `open_change`.
-3. Reviewer tick calls `read_state`, `get_head_sha`, and `read_markers`. If proof fails, it sets `needs-fix`. If proof passes on the first clean head, it still requests at least one fix cycle.
-4. Fixer tick reads reviewer feedback, patches the branch, runs proof, posts a fixer marker with an incremented cycle, and returns the change to review.
-5. Reviewer tick re-checks the new head. If proof passes, no blocking defects remain, and at least one fixer cycle exists, it sets `ready-for-human`.
+3. Reviewer tick calls `read_state`, `get_head_sha`, and `read_markers`. If proof fails or it finds blocking defects, it sets `needs-fix`. If proof passes and the head is clean, it converges directly to `ready-for-human` — no fix cycle is forced.
+4. (Only if `needs-fix`) Fixer tick reads reviewer feedback, patches the branch, runs proof, posts a fixer marker with an incremented cycle, and returns the change to review.
+5. (Only if a cycle happened) Reviewer tick re-checks the new head. If proof passes and no blocking defects remain, it sets `ready-for-human`.
 6. If proof is absent, the state becomes `unproven`. If the cycle cap is hit with blocking defects, the state becomes `did-not-converge`. If repeated runner kills exceed the retry cap, the state becomes `stalled`.
 
 ## Bootstrap Report Template

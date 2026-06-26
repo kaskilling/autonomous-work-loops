@@ -29,7 +29,7 @@ ready → in-progress → PR#3 (proof: 9 passed)
 
 ## What this proves about the DESIGN
 
-- **Mandatory hardening cycle (ADR-0003) is real, not cosmetic.** The reviewer found no defect on a clean PR yet still refused to converge on first pass, demanding a fixer cycle — exactly the anti-rubber-stamp behavior the design exists for.
+- **The mandatory hardening cycle fired exactly as designed — and that exposed it as ceremony.** The reviewer found no defect on a clean PR yet still refused to converge on first pass, the fixer ran and changed nothing, then the reviewer approved byte-identical code. **This observation led us to DROP the mandatory-cycle rule** (ADR-0003 amended 2026-06-26): a clean proven pass now converges immediately. Rigor is carried by proof-as-precondition (ADR-0005) and the adversarial/cross-model reviewer (ADR-0010), not by forced motion. The timeline below reflects the *old* behavior at test time.
 - **Proof-as-precondition (ADR-0005) held.** Every state transition re-ran pytest; convergence never happened without a green proof.
 - **Zero-memory ticks (ADR-0001) + SHA markers (ADR-0002) work.** Each tick reconstructed state purely from host labels + markers; the idempotency no-op confirms no hidden memory.
 - **Atomic claim (ADR-0008) held.** One branch, one PR, no duplication.
