@@ -66,11 +66,13 @@ Too much machinery for a folder of markdown; the security-conscious audience (ru
 
 The skill *emits* runner artifacts; it does not host them. Per ADR-0007 the runner is also the budget wall. Bootstrap should offer these execution surfaces, cheapest-first:
 
-1. **Local cron + `timeout`** — `*/15 * * * * timeout 30m <agent> --skill autonomous-work-loops --role reviewer ...`. Matches the video. Default for solo/local.
+1. **Local cron + runner script** — `*/15 * * * * /repo/.agent-loops/runners/reviewer.sh`. The runner wraps a prompt-based headless agent invocation in `timeout`/`gtimeout`. Matches the video. Default for solo/local.
 2. **`/loop` (Claude Code)** — the built-in recurring invocation; the runner is a `/loop` entry per role.
 3. **CI schedule (GitHub Actions `schedule:`)** — for hands-off/team use; the wall is the job `timeout-minutes`. Requires the credential-boundary Critical Decision (a bot/service token, not the user's local creds — see ADR cluster on credentials in PLAN/CONTEXT).
 
 The skill ships these as **templates in `assets/runners/`**, rendered with the repo's discovered values during bootstrap.
+
+Headless agents load the skill by prompt, not by phantom `--skill`/`--role` flags. The rendered runner should invoke the agent command with a prompt such as: "Load the autonomous-work-loops skill and run exactly one reviewer tick..." and should wrap that invocation in the external wall.
 
 ## 6. Credentials & blast radius (ecosystem-level reminder)
 

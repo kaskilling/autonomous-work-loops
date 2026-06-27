@@ -12,7 +12,7 @@ Decisions from the grilling session, in dependency order. ADR-0001 is the root c
 | [0006](0006-v1-core-with-forward-compatible-capture-and-human-gated-suggestions.md) | V1 core-only; forward-compatible evidence capture + human-gated tiny-PR suggestions; V1→V2 is additive enable | 0003 |
 | [0007](0007-budget-enforcement-split-state-derived-vs-external-wall.md) | Budgets: state-derived enforced at tick, continuous enforced by external runner wall | 0001, 0003 |
 | [0008](0008-work-claim-atomicity-via-branch-ref-push.md) | Work Claim atomicity via atomic branch-ref push; labels advisory; state-derived stale reclaim | 0001, 0002, 0007 |
-| [0009](0009-github-only-v1-behind-a-named-prose-adapter-seam.md) | GitHub-only V1 behind a named prose adapter seam (8 host ops); V2 multi-host is additive | 0006 |
+| [0009](0009-github-only-v1-behind-a-named-prose-adapter-seam.md) | GitHub-only V1 behind a named prose adapter seam (9 host ops); V2 multi-host is additive | 0006 |
 | [0010](0010-same-model-review-is-adversarial-and-proof-anchored.md) | Same-model review is adversarial + proof-anchored; opt-in cross-model; no-proof+same-model never auto-converges (tightens 0005) | 0005 |
 
 ## The V1 system in one paragraph

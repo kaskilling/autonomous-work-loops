@@ -6,13 +6,17 @@ The Work Claim is the atomic branch ref. Labels are advisory and human-visible.
 
 ## Claim Contract
 
-1. Candidate issue must have the configured `ready` label.
-2. Candidate issue must pass `is_trusted_actor`.
-3. Implementer must be under active concurrency budget.
-4. Implementer calls `claim_work`.
-5. Only the tick that successfully creates `loop/impl/issue-<id>` owns the work.
+1. Implementer calls `list_ready_work` to discover candidate issues. Discovery is read-only.
+2. Candidate issue must have the configured `ready` label.
+3. Candidate issue must pass `is_trusted_actor(issue_id)`.
+4. Implementer must be under active concurrency budget.
+5. Implementer calls `claim_work(issue_id)`.
+6. `claim_work` re-asserts `is_trusted_actor(issue_id)` before any branch push or label flip. A safety decision must not depend on agent discipline alone.
+7. Only the tick that successfully creates `loop/impl/issue-<id>` owns the work.
 
 The branch name is keyed on issue ID alone. Do not include title text, body hash, or implementation plan in the branch name.
+
+Never let `claim_work` choose the next issue by itself. Selection, trust classification, and privileged claiming are distinct steps.
 
 ## Stale Reclaim
 

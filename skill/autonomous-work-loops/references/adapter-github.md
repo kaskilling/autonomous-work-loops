@@ -2,16 +2,38 @@
 
 Cites ADR-0002, ADR-0004, ADR-0008, ADR-0009.
 
-V1 supports GitHub only, behind these eight named host operations. All playbooks call these names rather than embedding host commands. A local markdown queue or mkdir-lock backend can later implement the same contract, but V1 does not build that backend.
+V1 supports GitHub only, behind these nine named host operations. All playbooks call these names rather than embedding host commands. A local markdown queue or mkdir-lock backend can later implement the same contract, but V1 does not build that backend.
 
-## `claim_work`
+## `list_ready_work`
 
-Purpose: atomically claim one trusted `ready` issue for the Implementer.
+Purpose: discover candidate ready issues without claiming or mutating anything.
 
 Recipe:
 
 ```sh
-issue="$(gh issue list --label ready --state open --json number,author,labels,updatedAt --jq '.[0].number')"
+gh issue list --label ready --state open --json number,title,author,labels,updatedAt --jq '.[] | {number, title, author: .author.login, updatedAt}'
+```
+
+Treat the result as candidates only. Every candidate must pass `is_trusted_actor(issue)` before it can be passed to `claim_work`.
+
+## `claim_work`
+
+Purpose: atomically claim one already-vetted trusted `ready` issue for the Implementer.
+
+Inputs:
+
+- `issue_id`: GitHub issue number selected from `list_ready_work` after `is_trusted_actor(issue_id)` returned trusted.
+
+Recipe:
+
+```sh
+issue="$1"
+# Defense in depth: re-assert the safety gate inside the privileged operation.
+# Do not push a branch or flip labels unless this named operation returns trusted.
+is_trusted_actor "$issue" || {
+  printf '%s\n' "refusing to claim untrusted issue #${issue}" >&2
+  exit 1
+}
 branch="loop/impl/issue-${issue}"
 git fetch origin
 git switch -c "$branch" "origin/$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')"
@@ -21,6 +43,8 @@ gh issue edit "$issue" --remove-label ready --add-label in-progress
 ```
 
 If the push fails because the remote ref already exists, another tick won. Back off and exit without changing work.
+
+The safety principle is non-negotiable: the host operation that performs the privileged action must enforce the trust gate itself. Do not rely only on the playbook caller remembering to check trust first.
 
 ## `read_state`
 
@@ -102,12 +126,15 @@ gh pr view "$pr" --json headRefOid --jq '.headRefOid'
 
 Purpose: decide whether an issue can be claimed.
 
+Input: `issue_id`.
+
 Recipe:
 
 ```sh
-actor="$1"
+issue="$1"
+actor="$(gh issue view "$issue" --json author --jq '.author.login')"
 gh api "repos/{owner}/{repo}/collaborators/${actor}/permission" --jq '.permission'
 gh issue view "$issue" --json author,labels,comments
 ```
 
-Return trusted only when the actor is listed in `.agent-loops/config.yaml` `trusted_actors`, has sufficient inferred permission under the configured `trust_posture`, or a trusted actor has explicitly vouched for the item.
+Return trusted only when the issue author is listed in `.agent-loops/config.yaml` `trusted_actors`, has sufficient inferred permission under the configured `trust_posture`, or a trusted actor has explicitly vouched for the item in the issue comments or labels.

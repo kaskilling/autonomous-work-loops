@@ -1,5 +1,7 @@
 # BUILD PLAN — `autonomous-work-loops` skill (V1)
 
+Historical note: this was the original V1 build plan. ADR-0003 was amended after the first live test, so the current skill converges on a clean proven first pass and does not require a mandatory fix cycle.
+
 You are an autonomous build agent. Build a **skill** named `autonomous-work-loops` exactly to this spec. This plan is self-contained; the authoritative design rationale is in `../design/adr/` (read `0000-index.md` first, then any ADR you need). Do **not** re-litigate design decisions — they are settled. Your job is to render them into a working skill.
 
 ## 0. Operating rules for you, the build agent
@@ -18,7 +20,7 @@ skill/autonomous-work-loops/
 ├── SKILL.md                      # Router. <100 lines. Frontmatter + mode dispatch.
 ├── references/
 │   ├── bootstrap.md              # Discovery checklist, setup model, Critical Decisions, Bootstrap Report
-│   ├── adapter-github.md         # The 8 named host operations, implemented for GitHub via `gh`/git
+│   ├── adapter-github.md         # The 9 named host operations, implemented for GitHub via `gh`/git
 │   ├── state-model.md            # Labels + SHA-stamped marker comment grammar (versioned)
 │   ├── loop-implementer.md       # Implementer tick playbook (default, repo-overridable)
 │   ├── loop-reviewer.md          # Reviewer tick playbook (adversarial, proof-anchored)
@@ -33,7 +35,7 @@ skill/autonomous-work-loops/
     │   ├── config.yaml           # Annotated, with the V2 keys present-but-dormant
     │   └── playbooks/{implementer,reviewer,fixer}.md
     ├── runners/
-    │   ├── cron.sh.tmpl          # `timeout N <agent-cmd> --role X` (the budget wall, ADR-0007)
+    │   ├── cron.sh.tmpl          # `timeout N <agent-cmd> "Load the skill and run one <role> tick"` (budget wall)
     │   ├── loop.md.tmpl          # /loop invocation per role (Claude Code)
     │   └── github-actions.yml.tmpl  # scheduled workflow, wall = timeout-minutes; bot-token note
     └── install.sh                # symlink/copy this folder into ~/.claude ~/.codex ~/.agents skills dirs
@@ -60,13 +62,13 @@ Each is an ADR; cite it in the relevant reference file so the contract is tracea
 
 1. **Two modes, zero cross-tick memory (ADR-0001).** Tick mode reconstructs all state from host + `.agent-loops/`. Never instruct the agent to "remember" anything across ticks.
 2. **State = labels + SHA-stamped marker comments (ADR-0002).** Define the marker grammar in `state-model.md`, versioned: `<!-- loop:<role> v=1 reviewed_sha=<sha> verdict=<...> cycle=<n> ts=<iso> -->`. Ticks compare `reviewed_sha` to current head to decide act vs no-op.
-3. **Convergence needs ≥1 fix cycle; bounded by cap (ADR-0003).** Reviewer → `ready-for-human` only if head is clean AND ≥1 fix cycle ran. At cap: non-blocking → hand off with items listed; blocking → `did-not-converge`. Put this in `convergence.md`.
+3. **Convergence on clean proven pass; bounded by cap (ADR-0003 amended).** Current rule: Reviewer → `ready-for-human` if proof passed and the current head is clean. Fix cycles happen only when real blocking defects are found, and those cycles are bounded by the cap. At cap: non-blocking → hand off with items listed; blocking → `did-not-converge`. Put this in `convergence.md`.
 4. **Trust-gated intake (ADR-0004).** Bootstrap infers posture from repo visibility/collaborators; emits editable `trusted_actors`. Implementer claims only trust-vetted `ready` issues. In `safety.md` + `bootstrap.md`.
 5. **Proof is a precondition (ADR-0005 + 0010 amendment).** Bootstrap discovers proof commands → `config.yaml` `proof:`. Tick: pass→flow, fail→`needs-fix`, absent→`unproven`+human gate. **No-proof repos never auto-converge.** In `bootstrap.md`, `convergence.md`, `safety.md`.
 6. **V1 capture + human-gated tiny-PR suggestion (ADR-0006).** Loops append structured evidence in the V2 schema to `.agent-loops/evidence/inbox/`. At threshold (default 3, same theme+scope) the Reviewer tick opens a **tiny PR** against the playbook proposing the addition. NO maintainer, NO consolidation, NO auto-apply. `evidence-capture.md`. `config.yaml` carries the dormant V2 keys.
 7. **Budget enforcement split (ADR-0007).** State-derived (cycles, changed-files, concurrency) checked by the tick at boundaries; continuous (runtime/cost) enforced by the runner's external wall. Killed tick: release claim, retry ≤2, then `stalled`. `budgets.md` + runner templates carry the `timeout`.
 8. **Claim atomicity via branch-ref push (ADR-0008).** Branch `loop/impl/issue-<id>`; label flip is advisory only; stale reclaim is state-derived from marker ts. `claiming.md`.
-9. **GitHub-only behind named prose adapter seam (ADR-0009).** Define exactly these operations in `adapter-github.md`: `claim_work`, `read_state`, `post_marker`, `read_markers`, `set_label`, `open_change`, `get_head_sha`, `is_trusted_actor`. All other references call operations *by name*, never raw `gh`. The local `mkdir`/markdown-queue fallback is "another implementation of the same contract," noted but not built out in V1.
+9. **GitHub-only behind named prose adapter seam (ADR-0009).** Define exactly these operations in `adapter-github.md`: `list_ready_work`, `claim_work`, `read_state`, `post_marker`, `read_markers`, `set_label`, `open_change`, `get_head_sha`, `is_trusted_actor`. All other references call operations *by name*, never raw `gh`. The local `mkdir`/markdown-queue fallback is "another implementation of the same contract," noted but not built out in V1.
 10. **Adversarial, proof-anchored review; opt-in cross-model (ADR-0010).** Reviewer playbook forces disconfirmation and anchors to proof output. `config.yaml` has `reviewer_model:` override (default empty = same model). `loop-reviewer.md`.
 
 ## 4. `config.yaml` (target repo) — required keys

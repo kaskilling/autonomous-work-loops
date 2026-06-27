@@ -12,7 +12,9 @@ Core principle: **the loop may produce unproven work, but must never launder unp
 
 ## Agent-authored proof
 
-When proof is absent, the Implementer may *create* a proof harness (e.g. a smoke test) as part of its work, but agent-authored proof is lower-trust: the first time a repo's proof is agent-authored it is a human gate; once a human accepts the harness, later work runs against it freely. This closes the self-certification loophole.
+When proof is absent, the Implementer may *create* a proof harness or propose a proof command, but that new harness/command is lower-trust: the first time a repo's proof path is agent-authored it is a human gate; once a human accepts the harness, later work runs against it freely. This closes the self-certification loophole.
+
+This does **not** mean normal agent-authored tests are invalid. If Bootstrap already discovered a trusted proof command such as `pytest`, `npm test`, or `gradle test`, the Implementer may add tests under that command and the passing command counts as normal proof.
 
 ## Considered Options
 

@@ -2,7 +2,7 @@
 
 A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR factory you can leave running unattended.
 
-Tag an issue `ready`. An **Implementer** claims it, writes the change on an isolated branch, proves it, and opens a PR. A **Reviewer** adversarially reviews it. A **Fixer** addresses the feedback. They cycle until the change converges — then it's labeled `ready-for-human` for you to merge. No human in the loop until the end.
+Tag an issue `ready`. An **Implementer** claims it, writes the change on an isolated branch, proves it, and opens a PR. A **Reviewer** adversarially reviews it. If defects are found, a **Fixer** addresses the feedback and the reviewer re-checks the new head. When proof passes and no blocking defects remain, the PR is labeled `ready-for-human` for you to merge. No human in the loop until the end.
 
 It is **not a daemon**. It's a bootstrapper plus a stateless single-tick executor: an external scheduler (cron, `/loop`, or CI) re-invokes one role per tick, and all state lives on the host (labels + commit-stamped marker comments), never in agent memory.
 
@@ -28,7 +28,7 @@ Claude Code users can also install it as a plugin (see [PUBLISHING.md](PUBLISHIN
 # -> discovers host/proof/trust, renders .agent-loops/, emits runners, writes a Bootstrap Report
 
 # 2. Let a scheduler run ticks (the runner is the cost wall)
-*/15 * * * * cd /repo && timeout 30m <agent> --skill autonomous-work-loops --role reviewer
+*/15 * * * * /repo/.agent-loops/runners/reviewer.sh
 ```
 
 ## Safety (read before pointing it at a credentialed repo)
@@ -46,4 +46,12 @@ Claude Code users can also install it as a plugin (see [PUBLISHING.md](PUBLISHIN
 
 ## Status
 
-V1 is complete and internally audited against all 10 ADRs. It has **not** yet been run end-to-end against a live GitHub repo — that's the v1 acceptance test (one `ready` issue → converged, proven, mergeable PR). V2 (self-evolution Maintainer Loop, multi-host) is designed in `design/` and enables additively.
+V1 is complete, internally audited against all 10 ADRs, and baseline-tested end-to-end on a live private GitHub repo with Codex (`ttl-cache-loop-test`; see `build/TEST-RESULTS.md`). The tested baseline is GitHub + local Codex runner + non-browser proof + permissive private-repo trust.
+
+| Capability | Status | Notes |
+|---|---|---|
+| GitHub bootstrap and single-tick Implementer/Reviewer/Fixer loops | **Implemented** | Shipped in `skill/autonomous-work-loops/`. |
+| Live Codex baseline on a private GitHub repo with pytest proof | **Tested once** | Passed in `build/TEST-RESULTS.md`. |
+| Strict-trust rejection, no-proof, failed-proof, duplicate-claim, stale-claim, and true unattended cron variants | **Designed, not fully run** | Tracked in `build/TEST-PLAN.md`; release-gating before broad public launch. |
+| Browser/Playwright proof under Codex sandbox | **Known environment constraint** | Use CI or another runner when local Codex sandbox cannot run browser proof. |
+| Maintainer Loop, Core Memory, `loopctl`, evidence consolidation, multi-host adapters | **Designed for V2** | Preserved in `design/PLAN-v2-target.md`; not active in V1. |

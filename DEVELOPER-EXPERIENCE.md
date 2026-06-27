@@ -47,7 +47,8 @@ Open an issue, write what you want (clearly — the issue body *is* the implemen
 The whole system state is **visible in your GitHub labels** — no dashboard, no log diving. You literally watch the label move:
 
 ```
-ready  →  in-progress  →  needs-fix  →  (back to in-progress)  →  ready-for-human
+clean path:  ready → in-progress → ready-for-human
+fix path:    ready → in-progress → needs-fix → in-progress → ready-for-human
 ```
 
 Under the hood, an external scheduler (cron) fires the runner scripts. From the real run:
@@ -55,8 +56,7 @@ Under the hood, an external scheduler (cron) fires the runner scripts. From the 
 - **Reviewer**: re-ran proof independently and inspected the diff against the issue's acceptance criteria. If it finds a blocking defect → `needs-fix`; if the head is clean and proof passed → straight to `ready-for-human`.
 - **Fixer** (only when there was a `needs-fix`): addresses the feedback, re-runs proof, returns the PR for re-review.
 
-> Note: the very first test run used an earlier rule that *forced* one fixer cycle even on a clean PR. We dropped that (it was ceremony — the fixer changed nothing and the reviewer then approved identical code). A clean, proven PR now converges in one implementer + one reviewer tick.
-- **Reviewer** again: clean head + proof passed + one fix cycle exists → **`ready-for-human`**.
+> Note: the very first test run used an earlier rule that *forced* one fixer cycle even on a clean PR. We dropped that (it was ceremony — the fixer changed nothing and the reviewer then approved identical code). A clean, proven PR now converges in one implementer + one reviewer tick. A second reviewer pass happens only after a real fixer change.
 
 Every step leaves a machine-readable marker comment on the PR (`<!-- loop:reviewer v=1 reviewed_sha=... verdict=... -->`) so the next tick — and you — can see exactly what happened and why.
 
@@ -70,7 +70,7 @@ The Bootstrap Report hands you cron lines like:
 Each runner is one `codex exec` tick wrapped in a 30-minute `gtimeout` wall. Install them and walk away.
 
 ### Your endgame
-You come back to a PR labeled `ready-for-human` that is **proven (tests ran and passed) and converged (survived a review→fix cycle)**. You read the diff, you merge. If something couldn't converge, you instead see `did-not-converge`, `unproven`, or `stalled` — distinct labels that tell you precisely why it needs you, rather than a false "ready."
+You come back to a PR labeled `ready-for-human` that is **proven (tests ran and passed) and converged (survived adversarial review; review→fix cycles ran only if real defects were found)**. You read the diff, you merge. If something couldn't converge, you instead see `did-not-converge`, `unproven`, or `stalled` — distinct labels that tell you precisely why it needs you, rather than a false "ready."
 
 ## What surprised me (honest notes)
 

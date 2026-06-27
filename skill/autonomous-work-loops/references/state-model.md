@@ -15,7 +15,7 @@ Required coarse labels:
 
 Terminal outcome labels (each is its own label, never co-applied with `ready-for-human`, so the board is filterable and `ready-for-human` alone always means "proven and converged"):
 
-- `unproven`: proof is absent or newly agent-authored and not yet human accepted.
+- `unproven`: proof is absent, the proof command itself was invented or changed by the agent and not yet human accepted, or objective proof cannot be run.
 - `did-not-converge`: cycle cap reached with blocking defects.
 - `stalled`: repeated runner kills exceeded retry budget.
 

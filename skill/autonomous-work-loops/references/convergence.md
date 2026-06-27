@@ -9,7 +9,7 @@ Convergence is marker-derived. A tick never relies on remembered prior outcomes.
 - `ready-for-human`: proof passed and the current head has no blocking defects. A clean first review converges immediately.
 - `needs-fix`: proof failed or blocking defects exist.
 - `did-not-converge`: cycle cap reached with blocking defects still unresolved.
-- `unproven`: proof is absent, newly agent-authored proof has not been human accepted, or objective proof cannot be run.
+- `unproven`: proof is absent, the proof command itself was invented or changed by the agent and has not been human accepted, or objective proof cannot be run.
 - `stalled`: repeated external-wall kills exceeded `kill_retries`.
 
 ## Cycle Rules
@@ -28,4 +28,4 @@ At cap:
 
 ## Proof Rules
 
-Proof present and passing allows normal convergence. Proof present and failing routes to `needs-fix`. Proof absent routes to `unproven`; no-proof repos never auto-converge under same-model review.
+Proof present and passing allows normal convergence. Proof present and failing routes to `needs-fix`. Proof absent routes to `unproven`; no-proof repos never auto-converge under same-model review. Agent-added tests under an existing configured proof command count as normal proof. Inventing or changing the proof command itself is a human gate until accepted.

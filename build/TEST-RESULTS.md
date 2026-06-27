@@ -21,7 +21,7 @@ ready → in-progress → PR#3 (proof: 9 passed)
 | A1 | Implementer claimed only the trusted `ready` issue | ✅ only #1 (labeled ready) acted on; #2 untouched |
 | A2 | Exactly one `loop/impl/issue-1` branch; no duplicate PRs | ✅ 1 branch, 1 PR |
 | A3 | Every verdict-bearing head had proof run | ✅ all 3 markers show `9 passed` |
-| A4 | ≥1 real review→fix cycle before `ready-for-human` | ✅ 1 fixer `verdict=fixed` marker |
+| A4 (historical) | Old ≥1 review→fix cycle rule before `ready-for-human` | ✅ 1 fixer `verdict=fixed` marker; rule later dropped, see note below |
 | A5 | Re-tick on unchanged head = no-op (idempotent) | ✅ re-ran reviewer on converged head: 0 new comments, no label change |
 | A6 | `ready-for-human` only on proven+converged; terminal labels distinct | ✅ PR carries only `ready-for-human`; no `unproven`/`did-not-converge` |
 | A7 | No tick exceeded the runtime wall | ✅ all ticks completed well under 30m `gtimeout` |

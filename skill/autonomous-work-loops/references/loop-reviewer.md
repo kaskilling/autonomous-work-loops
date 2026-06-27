@@ -21,7 +21,7 @@ Assume defects exist. Try to disconfirm the Implementer's claims. Inspect the ac
 9. If only non-blocking defects remain at the cycle cap, call `post_marker` with `verdict=ready-for-human`, list remaining items, call `set_label` to `ready-for-human`, and exit.
 10. If blocking defects remain at the cycle cap, call `post_marker` with `verdict=did-not-converge`, call `set_label` to `did-not-converge` (its own terminal label, NOT `ready-for-human`), list the blocking items, route to human, and exit.
 11. If the head is clean and proof passed, call `post_marker` with `verdict=ready-for-human` and call `set_label` to `ready-for-human`. A clean first pass converges immediately — do NOT force a fixer cycle when there is nothing to fix. (Cycles arise only from real blocking defects found in step 8.)
-13. At the end of a normal review, run the evidence threshold check from `evidence-capture.md`. If threshold is met, open one tiny playbook-suggestion PR.
+12. At the end of a normal review, run the evidence threshold check from `evidence-capture.md`. If threshold is met, open one tiny playbook-suggestion PR.
 
 ## Review Notes
 

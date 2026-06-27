@@ -1,15 +1,15 @@
 # Publishing & Marketing
 
-## Before you publish: the one gate that matters
+## Before broad public release: the gates that matter
 
-Run the **v1 acceptance test** on a throwaway GitHub repo first:
+The baseline v1 acceptance test has passed once on a live private GitHub repo. Before broad public release, run the remaining validation matrix on throwaway repos:
 
 1. Create a small repo with a real test command and 1–2 `ready` issues.
 2. Bootstrap: `/autonomous-work-loops`.
 3. Run the three roles a few ticks each (locally, under `timeout`).
-4. Confirm: one `ready` issue → claimed → proven PR → at least one review→fix cycle → `ready-for-human`. Confirm a no-proof repo lands on `unproven`, and a hard issue caps out at `did-not-converge` rather than looping forever.
+4. Confirm: one `ready` issue → claimed → proven PR → `ready-for-human`. A clean proven PR may converge on the first review; review→fix cycles happen only when defects are found. Also confirm a no-proof repo lands on `unproven`, a failed-proof PR lands on `needs-fix`, strict-trust intake rejects untrusted work, duplicate claims do not create duplicate PRs, stale claims recover, and a hard issue caps out at `did-not-converge` rather than looping forever.
 
-Do not publish until this passes once. Everything below assumes it has.
+Do not market this beyond early testers until those variants pass or are documented as known constraints. Everything below assumes the baseline has passed and the remaining matrix is visible.
 
 ## How to publish (three channels, pick based on audience)
 
@@ -28,7 +28,7 @@ The repo carries `.claude-plugin/plugin.json`. To make it installable:
 - **Official directory**: submit a PR to `anthropics/claude-code` (or the relevant community marketplace) adding an entry pointing at this repo with a pinned `sha`. This is how every plugin in `claude-plugins-official` is listed.
 
 ### 3. Discovery content
-A short README GIF of the label board moving `ready → in-progress → needs-fix → ready-for-human` is the single most convincing artifact. Pair with a 60-second screen capture mirroring the source video's checkers/connect-four demo, but showing the **review→fix convergence** (the part the original glossed over) — that's your differentiation.
+A short README GIF of the label board moving `ready → in-progress → ready-for-human` on a clean proven PR, plus `needs-fix → in-progress → ready-for-human` when the reviewer finds a real defect, is the single most convincing artifact. Pair with a 60-second screen capture mirroring the source video's checkers/connect-four demo, but showing the **proof-anchored review/fix convergence** (the part the original glossed over) — that's your differentiation.
 
 ## Versioning
 
@@ -39,7 +39,7 @@ A short README GIF of the label board moving `ready → in-progress → needs-fi
 
 "Loop engineering" is already a crowded term and `ralph-loop` already ships. Do **not** market this as "loops for Claude." Market the three things it has that nothing else does:
 
-1. **Reviewed, not just retried.** Adversarial, proof-anchored review with a mandatory hardening cycle (most "autonomous PR" demos hand you unreviewed first-draft code). One-liner: *"It doesn't just write the PR — it reviews and hardens it until it converges."*
+1. **Reviewed, not just retried.** Adversarial, proof-anchored review that converges on a clean proven pass and enters review→fix cycles only for real defects (most "autonomous PR" demos hand you unreviewed first-draft code). One-liner: *"It doesn't just write the PR — it reviews and hardens it until it converges."*
 2. **Safe to leave running.** Trust-gated intake + proof-as-precondition + human gates + cost walls. One-liner: *"You can point it at a credentialed repo and walk away."*
 3. **Portable and honest.** Works across Claude/Codex/any agent; state lives on the host so it's resumable and auditable; no hidden daemon. One-liner: *"No black box — the whole state machine is visible in your issue labels."*
 
