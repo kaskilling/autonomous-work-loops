@@ -23,7 +23,7 @@ In the target repo, invoke the skill in bootstrap mode:
 ```
 
 What it does, unattended:
-- Discovers host (GitHub), default branch, **visibility → trust posture**, collaborators → `trusted_actors`, and crucially **your proof command** (it found `pytest` / would find `npm test` / etc.).
+- Discovers host (GitHub), default branch, **visibility → trust posture**, explicit loop dispatchers → `trusted_actors`, and crucially **your proof command** (it found `pytest` / would find `npm test` / etc.).
 - Renders `.agent-loops/` into your repo: `config.yaml`, three playbooks, an evidence inbox, and **ready-to-run Codex runner scripts** for each role.
 - Writes a **Bootstrap Report** stating exactly what it detected and what's left for you to decide.
 
@@ -41,7 +41,7 @@ You review the Bootstrap Report's **Critical Decisions** (trust posture, proof c
 ## Operating: the daily loop
 
 ### The only thing you do
-Open an issue, write what you want (clearly — the issue body *is* the implementer's brief), and apply the **`ready`** label. That's the entire human input.
+Open an issue, write what you want (clearly — the issue body *is* the implementer's brief), and apply the **`ready`** label. In strict mode, the issue must be authored by someone in `trusted_actors`; if the idea came from an external issue, create a trusted-authored dispatch issue that summarizes the accepted work and links the source. That's the entire human input.
 
 ### Watching it work
 The whole system state is **visible in your GitHub labels** — no dashboard, no log diving. You literally watch the label move:

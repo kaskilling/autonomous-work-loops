@@ -1,6 +1,6 @@
 # BUILD PLAN — `autonomous-work-loops` skill (V1)
 
-Historical note: this was the original V1 build plan. ADR-0003 was amended after the first live test, so the current skill converges on a clean proven first pass and does not require a mandatory fix cycle.
+Historical note: this was the original V1 build plan. ADR-0003 was amended after the first live test, so the current skill converges on a clean proven first pass and does not require a mandatory fix cycle. ADR-0004 was later tightened after gate validation: strict trust is now author-only dispatch, not collaborator or vouch inference. Treat the body below as historical where it conflicts with current ADRs.
 
 You are an autonomous build agent. Build a **skill** named `autonomous-work-loops` exactly to this spec. This plan is self-contained; the authoritative design rationale is in `../design/adr/` (read `0000-index.md` first, then any ADR you need). Do **not** re-litigate design decisions — they are settled. Your job is to render them into a working skill.
 

@@ -7,12 +7,12 @@ Bootstrap mode sets up `.agent-loops/` in the target repository and exits. It di
 ## Discovery Checklist
 
 1. Confirm the repo host is GitHub for V1. Use `adapter-github.md` as the only V1 host implementation.
-2. Identify default branch, current remote, repository visibility, collaborators or teams with write access, and whether issues and pull requests are enabled.
+2. Identify default branch, current remote, repository visibility, explicit loop dispatchers, and whether issues and pull requests are enabled.
 3. Discover proof commands for `test`, `build`, and `lint` from package scripts, build files, CI workflows, README instructions, and existing developer docs.
 4. Infer trust posture:
    - `permissive` for solo private repos.
    - `strict` for public or multi-contributor repos.
-5. Build `trusted_actors` from maintainers, owners, or explicit write-access dispatchers. Leave it editable.
+5. Build `trusted_actors` from explicit maintainers, owners, or named loop dispatchers. Do not add every collaborator by default. Leave the list editable.
 6. Choose runner surface and render from `assets/runners/`: `codex.sh.tmpl` (default for a Codex-driven local loop), `cron.sh.tmpl` (generic agent), `loop.md.tmpl` (Claude Code `/loop`), or `github-actions.yml.tmpl` (scheduled CI). Headless agents load the skill by PROMPT, not by `--skill/--role` flags. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications.
 7. Render `.agent-loops/config.yaml`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
 
@@ -26,7 +26,7 @@ Bootstrap may edit target-repo files, but it must keep `.agent-loops/config.yaml
 
 Write a Bootstrap Report in the target repo or in the conversation. Include:
 
-- `trust_posture`, why it was inferred, and the editable `trusted_actors` list.
+- `trust_posture`, why it was inferred, and the editable `trusted_actors` list. In strict mode, only issues authored by these actors are executable; external work needs a trusted-authored dispatch issue.
 - Proof commands found or missing. Missing proof is a human gate and prevents autonomous convergence.
 - Runner surface and credential boundary. CI runners require a scoped bot token, not silent reuse of personal local credentials.
 - Budget defaults and any requested changes. Budget increases require human approval.
@@ -34,7 +34,7 @@ Write a Bootstrap Report in the target repo or in the conversation. Include:
 
 ## Dry-Run Walkthrough
 
-1. A trusted actor applies `ready` to issue `123`.
+1. A trusted actor authors issue `123` and applies `ready`. If the original request came from an external or untrusted issue, the trusted actor writes a dispatch issue that summarizes the accepted work and links the source issue.
 2. Implementer tick calls `list_ready_work`, verifies `is_trusted_actor(123)`, then calls `claim_work(123)`, which re-asserts trust before atomically creating `loop/impl/issue-123`, setting `in-progress`, implementing one unit, running configured proof, posting an implementer marker, and calling `open_change`.
 3. Reviewer tick calls `read_state`, `get_head_sha`, and `read_markers`. If proof fails or it finds blocking defects, it sets `needs-fix`. If proof passes and the head is clean, it converges directly to `ready-for-human` — no fix cycle is forced.
 4. (Only if `needs-fix`) Fixer tick reads reviewer feedback, patches the branch, runs proof, posts a fixer marker with an incremented cycle, and returns the change to review.

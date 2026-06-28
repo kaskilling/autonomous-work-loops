@@ -1,5 +1,8 @@
 # TEST PLAN — Validating `autonomous-work-loops` on a live repo
 
+
+**Gate smoke update 2026-06-28:** `build/GATE-RESULTS.md` records NO-GO for public release. Author-only strict rejection now passes in T2/T3/T4; failed-proof routing passed in T6. Replacement T5 trusted the allowlisted author but was blocked before claim by Codex `.git` write denial, so rerun T5 on a Git-capable Codex surface before running the remaining matrix.
+
 **Status update 2026-06-26:** the baseline live GitHub acceptance run has now passed on `ttl-cache-loop-test`; see `TEST-RESULTS.md`. This file remains the validation plan for remaining variants and release hardening.
 
 The acceptance test: **one `ready` issue → a converged, proven, mergeable PR, with no human in the loop.** This plan runs that on a real GitHub repo, with the loops driven by **Codex** (unlimited usage), and defines exactly how we judge pass/fail and which setup works best.
@@ -68,7 +71,7 @@ Run the happy-path issue under these variations and compare convergence quality 
 | Review model | same model (reviewer_model empty) | cross-model (`reviewer_model` = a different codex/Claude model) | Does cross-model review catch defects same-model rubber-stamps? (ADR-0010) |
 | Cadence | manual single ticks | cron unattended | Does the scheduler path hold up vs hand-driven? |
 | Proof present | proof configured | proof blanked (force `unproven`) | Confirms no-proof never auto-converges (ADR-0005 amendment) |
-| Trust posture | permissive (private) | strict (simulate: issue from a non-trusted actor) | Confirms trust gate actually blocks intake (ADR-0004) |
+| Trust posture | permissive (private) | strict author-only dispatch (reject non-allowlisted author; accept allowlisted dispatch issue) | Confirms trust gate blocks untrusted intake without becoming deny-all (ADR-0004) |
 
 Additional release-hardening rows: failed proof routes to `needs-fix`; duplicate claim race creates one branch/PR; stale claim recovers or escalates to `stalled`; browser proof runs on a compatible CI or non-sandboxed execution surface.
 

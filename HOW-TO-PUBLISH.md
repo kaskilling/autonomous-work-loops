@@ -6,18 +6,18 @@ This is the practical checklist. For the *why* behind channel choices, see `PUBL
 
 ## Are we ready to publish? — honest answer
 
-**Ready for: a soft launch to early testers / a public repo people can read and try.**
-**Not yet ready for: a "1.0, trust it unattended on your repos" announcement.**
+**Ready for: private development and targeted validation only.**
+**Not ready for: public soft launch, plugin distribution, or unattended use.**
 
 | Check | State |
 |---|---|
 | Core skill implemented + internally consistent | ✅ done |
-| Safety-critical trust gate enforced in the privileged op | ✅ fixed + verified |
+| Safety-critical trust gate enforced in the privileged op | ✅ T2/T3/T4 author-only retest passed (`build/GATE-RESULTS.md`) |
 | Docs match shipped behavior (no phantom flags, no stale cycle claims) | ✅ swept |
 | Baseline live run passed (GitHub + Codex + pytest) | ✅ once |
-| Full validation matrix (strict-trust, no-proof, failed-proof, cron, dup-claim, stale-claim, browser/CI proof) | ⏳ not run |
+| Full validation matrix (strict-trust, no-proof, failed-proof, cron, dup-claim, stale-claim, browser/CI proof) | ❌ strict rejection passed; allowlisted dispatch T5 blocked by Codex `.git`; failed-proof passed; remaining rows not run |
 
-**Recommendation:** publish now as **v0.1.0, labeled "early / GitHub + non-browser proof tested"**, with the README status table visible. Hold the **v1.0 "leave it running" announcement** until the validation matrix passes. The status table already tells this truth, so a soft launch is honest.
+**Recommendation:** do **not** publish yet. Prove the allowlisted dispatch path on a Git-capable Codex surface, then continue the remaining safety matrix. The previous soft-launch recommendation is superseded by `build/GATE-RESULTS.md`.
 
 ---
 
@@ -85,7 +85,7 @@ Users then run:
 
 Once A or B works, announce it. Use the material already written:
 - The **ralph-loop vs autonomous-work-loops table** in `design/ECOSYSTEM.md` — paste verbatim.
-- The **three one-liners** in `PUBLISHING.md` (reviewed-not-retried / safe-to-leave-running / no-black-box).
+- The **three one-liners** in `PUBLISHING.md` (reviewed-not-retried / guarded autonomy / no-black-box).
 - A short **GIF of the label board moving** `ready → in-progress → ready-for-human` — the single most convincing artifact.
 - Credit Neat Code's original video.
 
@@ -95,8 +95,8 @@ Once A or B works, announce it. Use the material already written:
 
 ## The one-paragraph version
 
-1. `gh repo create … --public --push`, then `git tag v0.1.0 && git push --tags`.
-2. For most people: point them at **Channel A** (clone + `install.sh`). It just works across Claude/Codex.
-3. For Claude one-click: add a **marketplace.json** pinned to `v0.1.0` (Channel B).
-4. Announce with the **ECOSYSTEM table + a label-board GIF** (Channel C), honestly labeled **early/v0.1**.
-5. Run the **validation matrix** (`build/TEST-PLAN.md`) → then cut **v1.0** and do the big "leave it running" announcement.
+1. Keep strict-trust semantics author-only and committed.
+2. Treat T2/T3/T4 as passed only with auditor-verified evidence from `build/GATE-RESULTS.md`.
+3. Rerun replacement T5 on a Git-capable Codex surface to prove allowlisted dispatch issues still work.
+4. Only then create/push the public repo and tag a pre-release.
+5. Continue the remaining validation matrix before any "leave it running" announcement.

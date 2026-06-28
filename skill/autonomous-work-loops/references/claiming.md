@@ -14,6 +14,8 @@ The Work Claim is the atomic branch ref. Labels are advisory and human-visible.
 6. `claim_work` re-asserts `is_trusted_actor(issue_id)` before any branch push or label flip. A safety decision must not depend on agent discipline alone.
 7. Only the tick that successfully creates `loop/impl/issue-<id>` owns the work.
 
+Under `strict`, `is_trusted_actor` means the issue author is in `trusted_actors`. Skip every other candidate before reading its body as execution instructions. External or untrusted work must arrive through a trusted-authored dispatch issue.
+
 The branch name is keyed on issue ID alone. Do not include title text, body hash, or implementation plan in the branch name.
 
 Never let `claim_work` choose the next issue by itself. Selection, trust classification, and privileged claiming are distinct steps.

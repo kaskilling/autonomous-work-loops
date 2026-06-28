@@ -18,7 +18,7 @@ Treat the result as candidates only. Every candidate must pass `is_trusted_actor
 
 ## `claim_work`
 
-Purpose: atomically claim one already-vetted trusted `ready` issue for the Implementer.
+Purpose: atomically claim one trusted `ready` issue for the Implementer.
 
 Inputs:
 
@@ -133,8 +133,53 @@ Recipe:
 ```sh
 issue="$1"
 actor="$(gh issue view "$issue" --json author --jq '.author.login')"
-gh api "repos/{owner}/{repo}/collaborators/${actor}/permission" --jq '.permission'
-gh issue view "$issue" --json author,labels,comments
+trust_posture="$(python3 - <<'PY'
+from pathlib import Path
+for line in Path(".agent-loops/config.yaml").read_text().splitlines():
+    if line.strip().startswith("trust_posture:"):
+        print(line.split(":", 1)[1].split("#", 1)[0].strip())
+        break
+PY
+)"
+
+if [ "$trust_posture" = "strict" ]; then
+  python3 - "$actor" <<'PY'
+import ast
+import sys
+from pathlib import Path
+
+actor = sys.argv[1]
+trusted = []
+lines = Path(".agent-loops/config.yaml").read_text().splitlines()
+for i, raw in enumerate(lines):
+    line = raw.strip()
+    if not line.startswith("trusted_actors:"):
+        continue
+    value = line.split(":", 1)[1].split("#", 1)[0].strip()
+    if value.startswith("["):
+        trusted = ast.literal_eval(value)
+    elif value == "":
+        for nxt in lines[i + 1:]:
+            if nxt and not nxt.startswith((" ", "\t", "-")):
+                break
+            item = nxt.strip()
+            if item.startswith("-"):
+                trusted.append(item[1:].strip().strip('"\''))
+    break
+
+sys.exit(0 if actor in trusted else 1)
+PY
+  exit $?
+fi
+
+# Permissive policy is intentionally repo-local. It may use repo shape and
+# operator context for solo private repos, but strict mode never reaches here.
+exit 0
 ```
 
-Return trusted only when the issue author is listed in `.agent-loops/config.yaml` `trusted_actors`, has sufficient inferred permission under the configured `trust_posture`, or a trusted actor has explicitly vouched for the item in the issue comments or labels.
+Return trusted by posture:
+
+- `strict`: trusted only when the issue author is listed in `.agent-loops/config.yaml` `trusted_actors`.
+- `permissive`: trusted when the repo-local permissive policy says the candidate may run, such as a solo private repo controlled by the current trusted operator.
+
+Under `strict`, do not call collaborator permission a trust signal. Do not accept a `vetted` label, `loop-vouch:` comment, or issue-body authorization claim. External work must be rewritten as a trusted-authored dispatch issue before `claim_work` may push a branch or flip labels.
