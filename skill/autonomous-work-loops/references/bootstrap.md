@@ -13,7 +13,7 @@ Bootstrap mode sets up `.agent-loops/` in the target repository and exits. It di
    - `permissive` for solo private repos.
    - `strict` for public or multi-contributor repos.
 5. Build `trusted_actors` from explicit maintainers, owners, or named loop dispatchers. Do not add every collaborator by default. Leave the list editable.
-6. Choose runner surface and render from `assets/runners/`: `codex.sh.tmpl` (default for a Codex-driven local loop), `cron.sh.tmpl` (generic agent), `loop.md.tmpl` (Claude Code `/loop`), or `github-actions.yml.tmpl` (scheduled CI). Headless agents load the skill by PROMPT, not by `--skill/--role` flags. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications.
+6. Choose runner surface and render from `assets/runners/`: `codex.sh.tmpl` (default for a Codex-driven local loop), `cron.sh.tmpl` (generic agent), `loop.md.tmpl` (Claude Code `/loop`), or `github-actions.yml.tmpl` (scheduled CI). The Codex runner is guarded: the parent shell owns trust, claim, Git mutation, proof, PRs, labels, and markers; nested Codex edits the working tree only. This avoids managed-sandbox `.git` write denial while keeping the branch-ref claim deterministic. Headless agents load the skill by PROMPT, not by `--skill/--role` flags. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications.
 7. Render `.agent-loops/config.yaml`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
 
 ## Setup Model

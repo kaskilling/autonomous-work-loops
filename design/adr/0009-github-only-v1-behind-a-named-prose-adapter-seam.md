@@ -12,6 +12,7 @@ This makes V2 multi-host an **addition** (a GitLab implementation of the same co
 
 - The local `mkdir`-lock fallback (ADR-0008) and the "no-host markdown queue" case become just other implementations of the same contract, not special cases bolted onto GitHub logic.
 - CONTEXT.md's "Host Adapter" term becomes real rather than aspirational from V1.
+- The adapter contract can be executed by a deterministic runner wrapper when the agent sandbox cannot perform host mutation. The contract stays the same; only the executor changes. This is how the guarded Codex runner keeps `claim_work` atomic while nested Codex cannot write `.git`.
 
 ## Considered Options
 

@@ -388,7 +388,7 @@ cd ~/Non_Work/Projects/autonomous-work-loops && git add build/GATE-EVIDENCE.md &
 
 **Interfaces:** Proves the gate is *correct*, not just *restrictive* — a deny-everything gate would also pass Tasks 2–4 but be useless.
 
-**Current status after `d8242a3` plus manual T5 rerun:** T2/T3/T4 have local and live evidence under author-only strict trust semantics. Two nested `codex exec` T5 attempts trusted the allowlisted author but failed before claim because the tick process could not write `.git/FETCH_HEAD`; treat that as a runner transport blocker. T5 then passed on a Git-capable manual loop surface: issue `#9` converged to PR `#10` with proof and `ready-for-human`.
+**Current status after guarded-runner fix:** T2/T3/T4 have local and live evidence under author-only strict trust semantics. Two unguarded nested `codex exec` T5 attempts trusted the allowlisted author but failed before claim because the tick process could not write `.git/FETCH_HEAD`; that is now fixed by the guarded Codex runner. T5 passed manually with issue `#9` -> PR `#10`, and the guarded runner passed with issue `#11` -> PR `#12`.
 
 - [x] **Step 1: Predict**
 
@@ -403,7 +403,7 @@ Run T5 only from a surface where the loop-engine process can mutate the repo's G
 - the runner can create, push, and delete a disposable branch in the fixture repo.
 - `gh auth status` is authenticated for issue/PR mutation.
 
-If any preflight fails, stop and switch runner surfaces. Do not spend another T5 attempt on a surface that cannot claim work. If parent-shell preflight passes but nested `codex exec` fails, classify the surface as not Git-capable for loop execution. This happened for the generated runner; the manual loop surface passed.
+If any preflight fails, stop and switch runner surfaces. Do not spend another T5 attempt on a surface that cannot claim work. If nested `codex exec` cannot write `.git`, use the guarded runner: parent shell performs trust, claim, proof, PR, labels, and markers while nested Codex only edits workspace files.
 
 - [x] **Step 3: Configure strict dispatch, create a fresh benign issue, and run the loop**
 
@@ -429,6 +429,13 @@ PR=$(gh pr list --repo $REPO --json number,headRefName --jq '.[]|select(.headRef
 Expected: `DISPATCH-ACCEPT PASS`.
 
 If the issue is classified trusted but claim fails before branch creation because Git cannot write `.git/FETCH_HEAD` or equivalent local repo state, record `BLOCKED - transport/environment` and switch to a Git-capable loop-engine surface. If Git mutation works but the trusted issue is still not claimed, record a product/harness failure.
+
+Guarded runner replacement evidence:
+
+- Issue `#11`: trusted dispatch accepted.
+- Branch: `loop/impl/issue-11`.
+- PR `#12`: proof-passed implementer marker and `ready-for-human` reviewer marker.
+- Snapshot: `snapshots/guarded-runner-t5-pass.txt`.
 
 - [x] **Step 5: Record evidence**
 

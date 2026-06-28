@@ -1,22 +1,15 @@
 #!/usr/bin/env bash
-# Usage after rendering:
-#   .agent-loops/runners/codex.sh
-# Or explicitly:
-#   .agent-loops/runners/codex.sh <repo_path> <role> [model]
+# Usage: run-guarded-tick.sh <repo_path> <role> [model]
 #
 # Managed Codex sandboxes can edit workspace files but may not write .git.
 # This runner keeps GitHub/Git mutation in the parent shell and uses nested
 # Codex only for workspace edits or review text.
 set -euo pipefail
 
-repo="${1:-}"
-role="${2:-}"
+repo="${1:?repo path required}"
+role="${2:?role required}"
 model="${3:-}"
-[ -n "$repo" ] || repo="{{repo_path}}"
-[ -n "$role" ] || role="{{role}}"
-[ -n "$model" ] || model="{{model}}"
-mins="${GUARDED_TIMEOUT_MINUTES:-{{timeout_minutes}}}"
-case "$mins" in ""|*"{{"*) mins=30 ;; esac
+mins="${GUARDED_TIMEOUT_MINUTES:-30}"
 raw="${RAW_EVIDENCE:-/Users/mkamar/Non_Work/Projects/autonomous-work-loops-lab/evidence/validation/prove-the-gate}"
 mkdir -p "$raw/logs"
 

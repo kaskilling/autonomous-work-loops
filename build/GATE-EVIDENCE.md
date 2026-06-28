@@ -218,3 +218,24 @@ Auditor evidence:
 - After snapshot: `snapshots/retest-t5-parent-pass.txt`
 - PR: `https://github.com/Mohamad-Kamar/awl-gate/pull/10`
 - Issue: `https://github.com/Mohamad-Kamar/awl-gate/issues/9`
+
+### Guarded Codex Runner Validation
+
+Verdict: PASS
+
+Prediction:
+- A fresh trusted issue should converge through the emitted guarded Codex runner even though nested `codex exec` cannot write `.git`.
+
+Observed:
+- Issue `#11` author was `Mohamad-Kamar` and had `ready`.
+- Guarded parent shell pushed claim branch `loop/impl/issue-11` before removing `ready` and adding `in-progress`.
+- Nested Codex edited only the working tree.
+- Guarded parent shell ran proof, committed implementation `8703097fd50a4bf144711ee3844fafdc618b7b77`, pushed, opened PR `#12`, and posted implementer marker `verdict=proof-passed`.
+- Guarded reviewer fetched `loop/impl/issue-11`, reran proof, posted reviewer marker `verdict=ready-for-human`, and labeled PR `#12` plus issue `#11` `ready-for-human`.
+
+Auditor evidence:
+- After snapshot: `snapshots/guarded-runner-t5-pass.txt`
+- Implementer proof log: `logs/guarded-proof-20260628-081511-issue-11.log`
+- Reviewer proof log: `logs/guarded-review-proof-20260628-081607-pr-12.log`
+- PR: `https://github.com/Mohamad-Kamar/awl-gate/pull/12`
+- Issue: `https://github.com/Mohamad-Kamar/awl-gate/issues/11`
