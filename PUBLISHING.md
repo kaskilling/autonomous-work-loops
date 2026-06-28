@@ -2,14 +2,14 @@
 
 ## Before broad public release: the gates that matter
 
-The baseline v1 acceptance test passed once on a live private GitHub repo, and the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues. Public release is still blocked because the allowlisted dispatch happy path hit a Codex `.git` transport boundary before claim. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. The next release gate is narrow: rerun only T5 on a Git-capable loop-engine surface that can claim, branch, commit, push, and open the PR from inside the tick process. After that passes, continue the remaining validation matrix on throwaway repos:
+The baseline v1 acceptance test passed once on a live private GitHub repo, the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues, and allowlisted dispatch acceptance passes on a Git-capable manual loop surface. Public release is still blocked by the remaining safety/workability matrix and by the generated nested `codex exec` runner, which cannot claim because `.git/FETCH_HEAD` is auto-protected in this environment. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. Continue the remaining validation matrix on throwaway repos:
 
 1. Create a small repo with a real test command and 1–2 `ready` issues.
 2. Bootstrap: `/autonomous-work-loops`.
 3. Run the three roles a few ticks each (locally, under `timeout`).
 4. Confirm: one `ready` issue → claimed → proven PR → `ready-for-human`. A clean proven PR may converge on the first review; review→fix cycles happen only when defects are found. Also confirm a no-proof repo lands on `unproven`, a failed-proof PR lands on `needs-fix`, strict-trust intake rejects untrusted authors, strict dispatch accepts allowlisted authors, duplicate claims do not create duplicate PRs, stale claims recover, and a hard issue caps out at `did-not-converge` rather than looping forever.
 
-Do not market this, including to early testers, until the allowlisted dispatch happy path and remaining safety matrix pass. The variants and new testing still matter, but they are queued behind T5 so transport noise does not contaminate broader release evidence. Everything below is a post-gate publishing path, not current permission to launch.
+Do not market this, including to early testers, until the remaining safety matrix passes and the supported runner story is explicit. The variants and new testing still matter, but nested `codex exec` transport noise should be tracked as a runner-design issue, not as a strict-trust product failure. Everything below is a post-gate publishing path, not current permission to launch.
 
 ## How to publish (three channels, pick based on audience)
 
@@ -40,7 +40,7 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 "Loop engineering" is already a crowded term and `ralph-loop` already ships. Do **not** market this as "loops for Claude." Market the three things it has that nothing else does:
 
 1. **Reviewed, not just retried.** Adversarial, proof-anchored review that converges on a clean proven pass and enters review→fix cycles only for real defects (most "autonomous PR" demos hand you unreviewed first-draft code). One-liner: *"It doesn't just write the PR — it reviews and hardens it until it converges."*
-2. **Designed for guarded autonomy, not yet proven release-ready.** Trust-gated intake + proof-as-precondition + human gates + cost walls are the intended safety story. Strict untrusted-author rejection now passes, but allowlisted dispatch acceptance still needs proof from a Git-capable loop-engine surface. One-liner after the gate: *"It exposes the whole state machine in your issue labels and proves gates before claiming safety."*
+2. **Designed for guarded autonomy, not yet proven release-ready.** Trust-gated intake + proof-as-precondition + human gates + cost walls are the intended safety story. Strict trust now passes both rejection and allowlisted dispatch on a Git-capable manual surface, but runner simplification and the wider matrix remain open. One-liner after the gate: *"It exposes the whole state machine in your issue labels and proves gates before claiming safety."*
 3. **Portable and honest.** Works across Claude/Codex/any agent; state lives on the host so it's resumable and auditable; no hidden daemon. One-liner: *"No black box — the whole state machine is visible in your issue labels."*
 
 ### Channels

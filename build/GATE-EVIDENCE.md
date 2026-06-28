@@ -195,3 +195,26 @@ Auditor evidence:
 Cleanup after evidence capture:
 - Removed `ready` from issues `#7` and `#8` so the next T5 attempt starts from a fresh explicit dispatch issue.
 - Verified no open issue in `Mohamad-Kamar/awl-gate` still has `ready`.
+
+### Task 5 Manual Git-Capable Loop Surface
+
+Verdict: PASS
+
+Prediction:
+- With `trust_posture: strict` and `trusted_actors: ["Mohamad-Kamar"]`, fresh issue `#9` authored by `Mohamad-Kamar` should be claimed and converge to `ready-for-human`.
+
+Observed:
+- Issue `#9` author was `Mohamad-Kamar` and had `ready`.
+- No active loop branches, loop PRs, or `in-progress` issues existed before claim.
+- Claim created remote branch `loop/impl/issue-9` at claim commit `cbc2483`.
+- Issue `#9` moved from `ready` to `in-progress` only after the branch-ref lock was pushed.
+- Implementation commit `5d3db5ad69b45383fc58a076cb1f96339ae6e29f` added `mod(a, b)` and `test_mod`.
+- Proof passed: `python3 -m pytest -q` returned `2 passed`.
+- PR `#10` opened from `loop/impl/issue-9`.
+- Implementer marker recorded `verdict=proof-passed`.
+- Reviewer reran proof, inspected the diff, posted `verdict=ready-for-human`, and labeled PR `#10` plus issue `#9` `ready-for-human`.
+
+Auditor evidence:
+- After snapshot: `snapshots/retest-t5-parent-pass.txt`
+- PR: `https://github.com/Mohamad-Kamar/awl-gate/pull/10`
+- Issue: `https://github.com/Mohamad-Kamar/awl-gate/issues/9`

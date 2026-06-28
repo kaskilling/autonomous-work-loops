@@ -1,7 +1,7 @@
 # TEST PLAN — Validating `autonomous-work-loops` on a live repo
 
 
-**Gate smoke update 2026-06-28:** `build/GATE-RESULTS.md` records NO-GO for public release. Author-only strict rejection now passes in T2/T3/T4; failed-proof routing passed in T6. Replacement T5 trusted the allowlisted author but was blocked before claim by Codex `.git` write denial, including on a fresh clone where the parent shell passed Git preflight but nested `codex exec` could not write `.git/FETCH_HEAD`. The next validation step is narrow: rerun only T5 on a surface where the loop engine itself can mutate Git. Keep the variant matrix below queued, but do not widen to T7/T8, race/stale-claim, cron, or model-comparison runs until T5 proves strict mode accepts allowlisted dispatch.
+**Gate smoke update 2026-06-28:** `build/GATE-RESULTS.md` records NO-GO for public release. Author-only strict rejection now passes in T2/T3/T4; failed-proof routing passed in T6; T5 allowlisted dispatch now passes on a Git-capable manual loop surface with issue `#9` and PR `#10`. The generated nested `codex exec` runner remains blocked by `.git/FETCH_HEAD` write denial, so treat runner redesign as separate from the strict-trust product verdict. The next validation step is to widen to T7/T8, race/stale-claim, cron/manual-runner comparison, and model-comparison runs without reopening T2/T3/T4/T5 unless strict-trust semantics change.
 
 **Status update 2026-06-26:** the baseline live GitHub acceptance run has now passed on `ttl-cache-loop-test`; see `TEST-RESULTS.md`. This file remains the validation plan for remaining variants and release hardening.
 
@@ -24,10 +24,10 @@ These are real gaps found while probing, not optional polish:
 
 ## Phases
 
-### Current gate — T5 before widening
-Start from commit `87ff8c3` or a descendant that preserves its author-only strict trust semantics. T2/T3/T4 do not need another retest unless those semantics change. Before spending time on the wider matrix, prove the T5 allowlisted dispatch happy path in a loop-engine process that can write `.git/FETCH_HEAD`, create a claim branch, commit, push, and open the PR.
+### Current gate — widen after manual T5 PASS
+Start from commit `87ff8c3` or a descendant that preserves its author-only strict trust semantics. T2/T3/T4/T5 do not need another retest unless those semantics change. T5 passed on a Git-capable manual loop surface; the generated nested `codex exec` runner did not.
 
-The expected T5 outcome is: trusted issue author -> implementer claim -> one `loop/impl/issue-<n>` branch -> one PR -> proof marker -> reviewer marks `ready-for-human`. If the same scenario fails before claim because Git mutation is blocked, classify it as transport/environment and switch runner surfaces rather than reopening the trust design.
+The accepted T5 outcome is: trusted issue author -> implementer claim -> one `loop/impl/issue-<n>` branch -> one PR -> proof marker -> reviewer marks `ready-for-human`. If the same scenario fails before claim because Git mutation is blocked, classify it as transport/environment and switch runner surfaces rather than reopening the trust design.
 
 ### Phase 1 — Repo + issue setup (Codex-executed)
 Duplicate code into the new private repo, push, create the 4 workflow labels (`ready`, `in-progress`, `needs-fix`, `ready-for-human`) plus the 3 terminal labels (`unproven`, `did-not-converge`, `stalled`), seed the approved issues (unlabeled at first), confirm `npm ci` + `npm run test:e2e` pass on a clean checkout (establishes the proof baseline).
@@ -80,7 +80,7 @@ Run the happy-path issue under these variations and compare convergence quality 
 
 Additional release-hardening rows: failed proof routes to `needs-fix`; duplicate claim race creates one branch/PR; stale claim recovers or escalates to `stalled`; browser proof runs on a compatible CI or non-sandboxed execution surface.
 
-Sequencing constraint: this matrix still matters, but it starts only after T5 passes on a Git-capable loop-engine surface. Until then, the release blocker is tick-process Git capability for trusted dispatch, not missing variant coverage.
+Sequencing constraint: this matrix starts after the manual T5 PASS. The remaining release blocker is now coverage of the broader matrix plus a clear runner story: manual Git-capable surface for V1.5, or a deterministic guard/claim wrapper before cron.
 
 Scoring per run: (1) did it converge? (2) cycles to converge, (3) wall-clock + codex tokens, (4) defects the reviewer caught vs. defects that slipped to `ready-for-human` (we plant one subtle bug to measure this), (5) any invariant violation.
 
