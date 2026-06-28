@@ -2,14 +2,14 @@
 
 ## Before broad public release: the gates that matter
 
-The baseline v1 acceptance test passed once on a live private GitHub repo, and the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues. Public release is still blocked because the allowlisted dispatch happy path hit a local Codex `.git` transport boundary before claim. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. After the Git-capable runner surface is proven, continue the remaining validation matrix on throwaway repos:
+The baseline v1 acceptance test passed once on a live private GitHub repo, and the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues. Public release is still blocked because the allowlisted dispatch happy path hit a local Codex `.git` transport boundary before claim. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. The next release gate is narrow: rerun only T5 on a Git-capable runner that can claim, branch, commit, push, and open the PR. After that passes, continue the remaining validation matrix on throwaway repos:
 
 1. Create a small repo with a real test command and 1–2 `ready` issues.
 2. Bootstrap: `/autonomous-work-loops`.
 3. Run the three roles a few ticks each (locally, under `timeout`).
 4. Confirm: one `ready` issue → claimed → proven PR → `ready-for-human`. A clean proven PR may converge on the first review; review→fix cycles happen only when defects are found. Also confirm a no-proof repo lands on `unproven`, a failed-proof PR lands on `needs-fix`, strict-trust intake rejects untrusted authors, strict dispatch accepts allowlisted authors, duplicate claims do not create duplicate PRs, stale claims recover, and a hard issue caps out at `did-not-converge` rather than looping forever.
 
-Do not market this, including to early testers, until the allowlisted dispatch happy path and remaining safety matrix pass. Everything below is a post-gate publishing path, not current permission to launch.
+Do not market this, including to early testers, until the allowlisted dispatch happy path and remaining safety matrix pass. The variants and new testing still matter, but they are queued behind T5 so transport noise does not contaminate broader release evidence. Everything below is a post-gate publishing path, not current permission to launch.
 
 ## How to publish (three channels, pick based on audience)
 
