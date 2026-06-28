@@ -219,6 +219,75 @@ Auditor evidence:
 - PR: `https://github.com/Mohamad-Kamar/awl-gate/pull/10`
 - Issue: `https://github.com/Mohamad-Kamar/awl-gate/issues/9`
 
+## Guarded Runner Widening 2026-06-28
+
+### Guarded Codex Runner Baseline
+
+Verdict: PASS
+
+Observed:
+- Commit `63e4d0b` introduced the guarded runner path: the parent shell owns trust checks, branch claims, GitHub mutation, proof, PR creation, labels, and markers; nested Codex only edits the working tree.
+- Trusted issue `#11` in `Mohamad-Kamar/awl-gate` produced branch `loop/impl/issue-11` and PR `#12`.
+- PR `#12` head `8703097fd50a4bf144711ee3844fafdc618b7b77` has implementer `verdict=proof-passed` and reviewer `verdict=ready-for-human` markers on that head.
+- PR `#12` and issue `#11` are labeled `ready-for-human`.
+
+### Task 7: Absent Proof Routes to `unproven`
+
+Verdict: PASS
+
+Observed:
+- Created private fixture repo `Mohamad-Kamar/awl-gate-noproof` with `.agent-loops/config.yaml` setting `proof.test: ""`.
+- Created issue `#1` with label `ready`.
+- Guarded implementer opened PR `#2` from branch `loop/impl/issue-1`.
+- PR `#2` head `0b380b0d9de5df1ecfb0071481320240af90d50f` is labeled `unproven` and has marker `verdict=unproven`.
+- Issue `#1` is labeled `unproven`.
+- Repo-wide issue labels in `awl-gate-noproof` were `["unproven"]`; no `ready-for-human` label appeared.
+
+### Task 8: `ready-for-human` Proof Honesty
+
+Verdict: PASS
+
+Observed sweep:
+- `Mohamad-Kamar/awl-gate` PR `#10` head `5d3db5ad69b45383fc58a076cb1f96339ae6e29f` has proof and ready-for-human markers for that head.
+- `Mohamad-Kamar/awl-gate` PR `#12` head `8703097fd50a4bf144711ee3844fafdc618b7b77` has proof and ready-for-human markers for that head.
+- `Mohamad-Kamar/awl-gate` PR `#14` head `251f1283e64c3c9f9234138f5aac8ac4fe76ec52` has proof and ready-for-human markers for that head.
+- `Mohamad-Kamar/awl-gate` PR `#16` head `580ab659a3770ae433051d08c7ecf20601970b51` has proof and ready-for-human markers for that head.
+
+### Task 10: Reviewer Idempotency
+
+Verdict: PASS
+
+Observed:
+- Re-ran guarded reviewer against an already converged head on PR `#12`.
+- Runner returned `no reviewable loop PR`.
+- PR `#12` comment count stayed at `2`; no extra marker or label churn occurred.
+
+### Task 11: Duplicate Claim Race
+
+Verdict: PASS
+
+Observed:
+- Created issue `#13` in `Mohamad-Kamar/awl-gate` with label `ready`.
+- Launched two guarded implementer ticks concurrently from separate clones.
+- One runner pushed the branch and continued; the other runner reported `lost claim race for issue #13`.
+- Remote branch count for `refs/heads/loop/impl/issue-13` was exactly `1`.
+- PR count for head `loop/impl/issue-13` was exactly `1`: PR `#14`.
+- Guarded reviewer converged PR `#14`; PR and issue labels became `ready-for-human`.
+
+### Task 12: Stale-Claim Recovery
+
+Verdict: PASS for stale-reclaim; cost-wall and cycle-cap remain unrun.
+
+Observed:
+- Added stale-claim handling to `build/harness/run-guarded-tick.sh` and `skill/autonomous-work-loops/assets/runners/codex.sh.tmpl`.
+- Created issue `#15` in `Mohamad-Kamar/awl-gate`, labeled it `in-progress`, and posted an old implementer marker with `ts=2020-01-01T00:00:00Z`.
+- No remote branch existed for `loop/impl/issue-15`.
+- First guarded implementer tick posted a stale-release marker, removed `in-progress`, and added `ready`.
+- Second guarded implementer tick reclaimed through the normal trust and branch-ref path, created branch `loop/impl/issue-15`, proved the change, and opened PR `#16`.
+- Guarded reviewer converged PR `#16`; PR `#16` head `580ab659a3770ae433051d08c7ecf20601970b51` has implementer `verdict=proof-passed` and reviewer `verdict=ready-for-human` markers.
+- PR `#16` and issue `#15` are labeled `ready-for-human`.
+- Final live residue check on `Mohamad-Kamar/awl-gate`: `0` open `ready` issues and `0` open `in-progress` issues.
+
 ### Guarded Codex Runner Validation
 
 Verdict: PASS

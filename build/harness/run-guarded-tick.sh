@@ -102,6 +102,29 @@ trusted_actor() {
   cfg trusted_actors | grep -Fxq "$actor"
 }
 
+stale_issue() {
+  local repo_slug="$1" issue="$2" branch marker_ts
+  branch="${branch_prefix}${issue}"
+  if git ls-remote --heads origin "refs/heads/${branch}" | grep -q .; then
+    return 1
+  fi
+  marker_ts="$(gh issue view "$issue" --repo "$repo_slug" --json comments --jq '.comments[].body | select(test("<!-- loop:implementer"))' | sed -n 's/.* ts=\([^ ]*\) -->.*/\1/p' | tail -1)"
+  [ -n "$marker_ts" ] || return 1
+  python3 - "$marker_ts" <<'PY'
+from datetime import datetime, timezone, timedelta
+import sys
+
+raw = sys.argv[1].replace("Z", "+00:00")
+try:
+    ts = datetime.fromisoformat(raw)
+except ValueError:
+    sys.exit(1)
+if ts.tzinfo is None:
+    ts = ts.replace(tzinfo=timezone.utc)
+sys.exit(0 if datetime.now(timezone.utc) - ts > timedelta(minutes=90) else 1)
+PY
+}
+
 default_branch() {
   git remote show origin | sed -n '/HEAD branch/s/.*: //p'
 }
@@ -165,14 +188,28 @@ implementer() {
   local repo_slug issue actor branch base title body claim_sha proof_log pr_body pr head_sha proof_rc log
   repo_slug="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 
+  local active_block=0
   while IFS=$'\t' read -r issue actor title; do
     [ -n "$issue" ] || continue
     trusted_actor "$actor" || continue
+    if stale_issue "$repo_slug" "$issue"; then
+      gh issue comment "$issue" --repo "$repo_slug" --body "<!-- loop:implementer v=1 reviewed_sha=stale verdict=no-op cycle=0 ts=$(ts) -->
 
-    if gh issue list --repo "$repo_slug" --state open --label "$label_in_progress" --json number --jq 'length' | grep -vq '^0$'; then
-      echo "implementer budget full: in-progress issue exists"
-      return 0
+Stale in-progress claim detected with no claim branch. Releasing the advisory label so the guarded runner can reclaim through the normal trust and branch-ref path." >/dev/null
+      gh issue edit "$issue" --repo "$repo_slug" --remove-label "$label_in_progress" --add-label "$label_ready" >/dev/null
+    else
+      active_block=1
     fi
+  done < <(gh issue list --repo "$repo_slug" --state open --label "$label_in_progress" --json number,title,author --jq '.[] | [.number, .author.login, .title] | @tsv')
+
+  if [ "$active_block" = 1 ]; then
+    echo "implementer budget full: active in-progress issue exists"
+    return 0
+  fi
+
+  while IFS=$'\t' read -r issue actor title; do
+    [ -n "$issue" ] || continue
+    trusted_actor "$actor" || continue
 
     branch="${branch_prefix}${issue}"
     if git ls-remote --heads origin "refs/heads/${branch}" | grep -q .; then

@@ -1,6 +1,6 @@
 # autonomous-work-loops
 
-A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR workflow. It is currently **pre-release**: author-only strict-trust rejection, allowlisted dispatch, and the guarded Codex runner now pass on live GitHub; public release is still blocked on the wider safety matrix.
+A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR workflow. It is currently **pre-release**: author-only strict-trust rejection, allowlisted dispatch, the guarded Codex runner, no-proof routing, proof honesty, duplicate-claim race behavior, and stale-claim recovery now pass on live GitHub; public release is still blocked on the remaining cost-wall, cycle-cap, cron, and planted-defect validation.
 
 Tag an issue `ready`. An **Implementer** claims it, writes the change on an isolated branch, proves it, and opens a PR. A **Reviewer** adversarially reviews it. If defects are found, a **Fixer** addresses the feedback and the reviewer re-checks the new head. When proof passes and no blocking defects remain, the PR is labeled `ready-for-human` for you to merge. No human in the loop until the end.
 
@@ -55,6 +55,7 @@ V1 is implemented and baseline-tested end-to-end on live private GitHub repos wi
 | Strict-trust rejection | **Retest PASS** | T2/T3/T4 passed under author-only semantics; see `build/GATE-RESULTS.md`. |
 | Strict dispatch acceptance | **PASS** | T5 issue `#9` converged to PR `#10`; guarded runner issue `#11` converged to PR `#12`. |
 | Failed-proof routing | **Smoke-tested PASS** | Red proof routed to `needs-fix`; see `build/GATE-RESULTS.md`. |
-| No-proof, duplicate-claim, stale-claim, and true unattended cron variants | **Designed, not fully run** | Tracked in `build/TEST-PLAN.md`; run next against the guarded runner. |
+| No-proof, proof honesty, duplicate-claim, stale-claim, and reviewer idempotency | **Guarded-runner PASS** | T7/T8/T10/T11/T12 passed on live GitHub; see `build/GATE-RESULTS.md`. |
+| Cost wall, cycle-cap, cron cadence, and planted-defect model comparison | **Not yet run** | Remaining public-release blockers. |
 | Browser/Playwright proof under Codex sandbox | **Known environment constraint** | Use CI or another runner when local Codex sandbox cannot run browser proof. |
 | Maintainer Loop, Core Memory, `loopctl`, evidence consolidation, multi-host adapters | **Designed for V2** | Preserved in `design/PLAN-v2-target.md`; not active in V1. |

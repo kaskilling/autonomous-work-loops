@@ -1,7 +1,7 @@
 # TEST PLAN — Validating `autonomous-work-loops` on a live repo
 
 
-**Gate smoke update 2026-06-28:** `build/GATE-RESULTS.md` records NO-GO for public release. Author-only strict rejection now passes in T2/T3/T4; failed-proof routing passed in T6; T5 allowlisted dispatch passes with issue `#9` and PR `#10`; and the guarded Codex runner passes with issue `#11` and PR `#12`. The next validation step is to widen to T7/T8, race/stale-claim, cron cadence, and model-comparison runs without reopening T2/T3/T4/T5 unless strict-trust semantics change.
+**Gate smoke update 2026-06-28:** `build/GATE-RESULTS.md` records NO-GO for public release. Author-only strict rejection now passes in T2/T3/T4; failed-proof routing passed in T6; T5 allowlisted dispatch passes with issue `#9` and PR `#10`; and the guarded Codex runner passes with issue `#11` and PR `#12`. The widened guarded-runner pass also covers T7 no-proof routing, T8 ready-for-human honesty, T10 idempotency, T11 duplicate-claim race behavior, and T12 stale-claim recovery. The next validation step is cost wall kill proof, cycle-cap escalation, cron cadence, and planted-defect model-comparison runs without reopening T2/T3/T4/T5 unless strict-trust semantics change.
 
 **Status update 2026-06-26:** the baseline live GitHub acceptance run has now passed on `ttl-cache-loop-test`; see `TEST-RESULTS.md`. This file remains the validation plan for remaining variants and release hardening.
 
@@ -80,7 +80,7 @@ Run the happy-path issue under these variations and compare convergence quality 
 
 Additional release-hardening rows: failed proof routes to `needs-fix`; duplicate claim race creates one branch/PR; stale claim recovers or escalates to `stalled`; browser proof runs on a compatible CI or non-sandboxed execution surface.
 
-Sequencing constraint: this matrix starts after the guarded-runner PASS. The remaining release blocker is broader matrix coverage, not the strict trust or claim transport path.
+Sequencing constraint: this matrix starts after the guarded-runner PASS. The remaining release blockers are cost-wall kill proof, cycle-cap escalation, unattended cron cadence, and planted-defect model comparison, not the strict trust or claim transport path.
 
 Scoring per run: (1) did it converge? (2) cycles to converge, (3) wall-clock + codex tokens, (4) defects the reviewer caught vs. defects that slipped to `ready-for-human` (we plant one subtle bug to measure this), (5) any invariant violation.
 
