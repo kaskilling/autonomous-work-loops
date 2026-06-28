@@ -169,3 +169,29 @@ Auditor evidence:
 - Before snapshot: `snapshots/retest-t5-before.txt`
 - After snapshot: `snapshots/retest-t5-after-blocked.txt`
 - Raw log: `logs/gate-implementer-20260628-141939.log`
+
+### Task 5 Second Attempt: Fresh Clone With Parent-Shell Git Preflight
+
+Verdict: BLOCKED - nested loop-engine transport/environment
+
+Prediction:
+- With `trust_posture: strict` and `trusted_actors: ["Mohamad-Kamar"]`, fresh issue `#8` authored by `Mohamad-Kamar` should be claimed and converge to `ready-for-human`.
+
+Preflight:
+- Fresh clone `/tmp/awl-gate-t5` was on `main...origin/main`.
+- Parent shell passed `git fetch origin`, a temporary `.git` probe create/remove, disposable branch create/push/delete, and `gh auth status`.
+
+Observed:
+- The nested `codex exec` implementer tick still failed before claim because `git fetch origin` could not open `.git/FETCH_HEAD`.
+- Issue `#8` stayed `ready`.
+- No `loop/impl/issue-8` branch exists.
+- No PR exists for `loop/impl/issue-8`.
+- The implementer posted `verdict=no-op` and classified the failure as transport/environment.
+
+Auditor evidence:
+- After snapshot: `snapshots/retest-t5-second-after-blocked.txt`
+- Raw log: `logs/gate-implementer-20260628-144509.log`
+
+Cleanup after evidence capture:
+- Removed `ready` from issues `#7` and `#8` so the next T5 attempt starts from a fresh explicit dispatch issue.
+- Verified no open issue in `Mohamad-Kamar/awl-gate` still has `ready`.

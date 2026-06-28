@@ -388,7 +388,7 @@ cd ~/Non_Work/Projects/autonomous-work-loops && git add build/GATE-EVIDENCE.md &
 
 **Interfaces:** Proves the gate is *correct*, not just *restrictive* — a deny-everything gate would also pass Tasks 2–4 but be useless.
 
-**Current status after `87ff8c3`:** this is the only gate-smoke retest to rerun next. T2/T3/T4 now have local and live evidence under author-only strict trust semantics. The prior T5 attempt trusted the allowlisted author but failed before claim because the local Codex surface could not write `.git/FETCH_HEAD`; treat that as a transport/environment blocker, not a product verdict.
+**Current status after `87ff8c3`:** this is the only gate-smoke retest to rerun next. T2/T3/T4 now have local and live evidence under author-only strict trust semantics. Two T5 attempts trusted the allowlisted author but failed before claim because the loop-engine process could not write `.git/FETCH_HEAD`; treat that as a transport/environment blocker, not a product verdict.
 
 - [ ] **Step 1: Predict**
 
@@ -396,14 +396,14 @@ Prediction: with strict config changed to `trusted_actors: ["Mohamad-Kamar"]`, a
 
 - [ ] **Step 2: Prove the runner is Git-capable**
 
-Run T5 only from a surface that can mutate the repo's Git state. Before creating the issue, verify:
+Run T5 only from a surface where the loop-engine process can mutate the repo's Git state. A parent shell preflight is not enough if the actual tick runs inside a stricter nested sandbox. Before creating the issue, verify from the same execution boundary that will run `claim_work`:
 
 - `git fetch origin` can update `.git/FETCH_HEAD`.
 - a temporary `.git` probe file can be created and removed.
 - the runner can create, push, and delete a disposable branch in the fixture repo.
 - `gh auth status` is authenticated for issue/PR mutation.
 
-If any preflight fails, stop and switch runner surfaces. Do not spend another T5 attempt on a surface that cannot claim work.
+If any preflight fails, stop and switch runner surfaces. Do not spend another T5 attempt on a surface that cannot claim work. If parent-shell preflight passes but nested `codex exec` fails, classify the surface as not Git-capable for loop execution.
 
 - [ ] **Step 3: Configure strict dispatch, create a fresh benign issue, and run the loop**
 
@@ -428,7 +428,7 @@ PR=$(gh pr list --repo $REPO --json number,headRefName --jq '.[]|select(.headRef
 ```
 Expected: `DISPATCH-ACCEPT PASS`.
 
-If the issue is classified trusted but claim fails before branch creation because Git cannot write `.git/FETCH_HEAD` or equivalent local repo state, record `BLOCKED - transport/environment` and switch to a Git-capable runner. If Git mutation works but the trusted issue is still not claimed, record a product/harness failure.
+If the issue is classified trusted but claim fails before branch creation because Git cannot write `.git/FETCH_HEAD` or equivalent local repo state, record `BLOCKED - transport/environment` and switch to a Git-capable loop-engine surface. If Git mutation works but the trusted issue is still not claimed, record a product/harness failure.
 
 - [ ] **Step 5: Record + reset config to permissive + commit**
 

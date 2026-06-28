@@ -2,7 +2,7 @@
 
 ## Before broad public release: the gates that matter
 
-The baseline v1 acceptance test passed once on a live private GitHub repo, and the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues. Public release is still blocked because the allowlisted dispatch happy path hit a local Codex `.git` transport boundary before claim. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. The next release gate is narrow: rerun only T5 on a Git-capable runner that can claim, branch, commit, push, and open the PR. After that passes, continue the remaining validation matrix on throwaway repos:
+The baseline v1 acceptance test passed once on a live private GitHub repo, and the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues. Public release is still blocked because the allowlisted dispatch happy path hit a Codex `.git` transport boundary before claim. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. The next release gate is narrow: rerun only T5 on a Git-capable loop-engine surface that can claim, branch, commit, push, and open the PR from inside the tick process. After that passes, continue the remaining validation matrix on throwaway repos:
 
 1. Create a small repo with a real test command and 1–2 `ready` issues.
 2. Bootstrap: `/autonomous-work-loops`.
@@ -40,7 +40,7 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 "Loop engineering" is already a crowded term and `ralph-loop` already ships. Do **not** market this as "loops for Claude." Market the three things it has that nothing else does:
 
 1. **Reviewed, not just retried.** Adversarial, proof-anchored review that converges on a clean proven pass and enters review→fix cycles only for real defects (most "autonomous PR" demos hand you unreviewed first-draft code). One-liner: *"It doesn't just write the PR — it reviews and hardens it until it converges."*
-2. **Designed for guarded autonomy, not yet proven release-ready.** Trust-gated intake + proof-as-precondition + human gates + cost walls are the intended safety story. Strict untrusted-author rejection now passes, but allowlisted dispatch acceptance still needs a Git-capable runner proof. One-liner after the gate: *"It exposes the whole state machine in your issue labels and proves gates before claiming safety."*
+2. **Designed for guarded autonomy, not yet proven release-ready.** Trust-gated intake + proof-as-precondition + human gates + cost walls are the intended safety story. Strict untrusted-author rejection now passes, but allowlisted dispatch acceptance still needs proof from a Git-capable loop-engine surface. One-liner after the gate: *"It exposes the whole state machine in your issue labels and proves gates before claiming safety."*
 3. **Portable and honest.** Works across Claude/Codex/any agent; state lives on the host so it's resumable and auditable; no hidden daemon. One-liner: *"No black box — the whole state machine is visible in your issue labels."*
 
 ### Channels
