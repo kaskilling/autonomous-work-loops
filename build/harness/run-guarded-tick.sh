@@ -308,7 +308,7 @@ run_nested_review() {
   if [ -n "$issue" ]; then
     body="$(gh issue view "$issue" --repo "$repo_slug" --json title,body --jq '"Title: " + .title + "\n\n" + (.body // "")')"
   fi
-  diff="$(git diff "$(git merge-base HEAD "origin/$(default_branch)")"..HEAD -- . ':!__pycache__' ':!*.pyc' | sed -n '1,240p')"
+  diff="$(git diff "$(git merge-base HEAD "origin/$(default_branch)")"..HEAD -- . | sed -n '1,240p')"
   prompt="You are reviewing PR #${pr} at head ${head}.
 
 Issue context:
@@ -335,7 +335,6 @@ After that, provide concise findings. Use blocking only for defects that should 
     wall codex exec --cd "$repo" -s read-only -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" >"$review_log" 2>&1
   fi
   local rc=$?
-  set -e
   if [ "$rc" -ne 0 ]; then
     return "$rc"
   fi
