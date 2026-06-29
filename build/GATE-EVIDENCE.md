@@ -3,7 +3,7 @@
 Validation date: 2026-06-27
 
 Raw evidence root:
-`/Users/mkamar/Non_Work/Projects/autonomous-work-loops-lab/evidence/validation/prove-the-gate`
+`$RAW_EVIDENCE`
 
 Fixture repo:
 `Mohamad-Kamar/awl-gate` (private throwaway)
@@ -178,7 +178,7 @@ Prediction:
 - With `trust_posture: strict` and `trusted_actors: ["Mohamad-Kamar"]`, fresh issue `#8` authored by `Mohamad-Kamar` should be claimed and converge to `ready-for-human`.
 
 Preflight:
-- Fresh clone `/tmp/awl-gate-t5` was on `main...origin/main`.
+- Fresh clone `$FIXTURE_ROOT/awl-gate-t5` was on `main...origin/main`.
 - Parent shell passed `git fetch origin`, a temporary `.git` probe create/remove, disposable branch create/push/delete, and `gh auth status`.
 
 Observed:

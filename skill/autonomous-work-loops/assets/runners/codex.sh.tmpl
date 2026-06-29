@@ -17,7 +17,7 @@ model="${3:-}"
 [ -n "$model" ] || model="{{model}}"
 mins="${GUARDED_TIMEOUT_MINUTES:-{{timeout_minutes}}}"
 case "$mins" in ""|*"{{"*) mins=30 ;; esac
-raw="${RAW_EVIDENCE:-/Users/mkamar/Non_Work/Projects/autonomous-work-loops-lab/evidence/validation/prove-the-gate}"
+raw="${RAW_EVIDENCE:-${repo}/.agent-loops/evidence/prove-the-gate}"
 mkdir -p "$raw/logs"
 
 cd "$repo"

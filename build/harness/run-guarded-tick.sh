@@ -10,7 +10,7 @@ repo="${1:?repo path required}"
 role="${2:?role required}"
 model="${3:-}"
 mins="${GUARDED_TIMEOUT_MINUTES:-30}"
-raw="${RAW_EVIDENCE:-/Users/mkamar/Non_Work/Projects/autonomous-work-loops-lab/evidence/validation/prove-the-gate}"
+raw="${RAW_EVIDENCE:-${repo}/.agent-loops/evidence/prove-the-gate}"
 mkdir -p "$raw/logs"
 
 cd "$repo"
