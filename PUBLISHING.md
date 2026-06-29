@@ -2,14 +2,14 @@
 
 ## Before broad public release: the gates that matter
 
-The baseline v1 acceptance test passed once on a live private GitHub repo, the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues, allowlisted dispatch acceptance passes, and the guarded Codex runner now claims and converges on live GitHub. No-proof routing, ready-for-human honesty, reviewer idempotency, duplicate-claim race behavior, and stale-claim recovery also pass on guarded live runs. Public release is still blocked by the remaining workability and quality matrix. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. Continue the remaining validation matrix on throwaway repos:
+The baseline v1 acceptance test passed once on a live private GitHub repo, the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues, allowlisted dispatch acceptance passes, and the guarded Codex runner now claims and converges on live GitHub. No-proof routing, ready-for-human honesty, reviewer idempotency, duplicate-claim race behavior, stale-claim recovery, cost-wall recovery, cycle-cap escalation, cron-equivalent cadence, and planted-defect review routing also pass on guarded fixture runs. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. Before broad public release, run one final release-candidate smoke from a fresh install:
 
 1. Create a small repo with a real test command and 1–2 `ready` issues.
 2. Bootstrap: `/autonomous-work-loops`.
 3. Run the three roles a few ticks each (locally, under `timeout`).
-4. Confirm: one `ready` issue → claimed → proven PR → `ready-for-human`. A clean proven PR may converge on the first review; review→fix cycles happen only when defects are found. The remaining unproven public-release checks are cost wall kill proof, cron cadence, planted-defect review quality, and a hard issue capping out at `did-not-converge` rather than looping forever.
+4. Confirm: one `ready` issue → claimed → proven PR → `ready-for-human`. A clean proven PR may converge on the first review; review→fix cycles happen only when defects are found.
 
-Do not market this, including to early testers, until the remaining matrix passes. The variants and new testing still matter, but strict trust, Codex claim transport, no-proof routing, duplicate claims, and stale-claim recovery are no longer the active blockers. Everything below is a post-gate publishing path, not current permission to launch.
+The guarded-runner matrix is now release-candidate ready, not a claim that every execution surface is proven. The cron row is cron-equivalent, not actual system cron. Browser/Playwright proof remains out of scope unless run in CI or another compatible non-sandboxed surface.
 
 ## How to publish (three channels, pick based on audience)
 

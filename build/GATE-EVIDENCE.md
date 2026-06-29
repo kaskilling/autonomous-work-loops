@@ -308,3 +308,84 @@ Auditor evidence:
 - Reviewer proof log: `logs/guarded-review-proof-20260628-081607-pr-12.log`
 - PR: `https://github.com/Mohamad-Kamar/awl-gate/pull/12`
 - Issue: `https://github.com/Mohamad-Kamar/awl-gate/issues/11`
+
+## Guarded-Runner Release-Blocker Validation 2026-06-29
+
+Runner commits:
+- `8724d01` implemented guarded reviewer diff inspection, guarded fixer behavior, cycle parsing, cap labels, and timeout recovery.
+- `26b0800` fixed failed-fixer cycle advancement.
+- `b29b8ce` fixed reviewer verdict parsing so echoed prompt examples cannot win over the final verdict.
+- `9e559b1` removed the fragile diff pathspec and preserved blocking verdict control flow.
+- `509b0ad` isolated nested Codex stdin from shell loop input.
+
+### Cost-Wall Kill Proof
+
+Verdict: PASS
+
+Observed:
+- Fixture repo: `Mohamad-Kamar/awl-gate-cost-wall`.
+- Issue `#1` claimed branch `loop/impl/issue-1`.
+- First killed tick left exactly one branch and no PR.
+- Immediate next tick posted a retry marker and returned the issue to `ready`; it did not wait for the stale-claim heuristic.
+- Repeated killed ticks reached `stalled`.
+- Final labels: issue `#1` `["stalled"]`.
+- Duplicate checks: branch count `1`, PR count for branch `0`.
+
+Evidence:
+- Summary: `/tmp/awl-validation-8724d01/cost-wall/acceptance-summary.txt`
+- Command transcript: `/tmp/awl-validation-8724d01/cost-wall/transcripts/validation-commands.log`
+- Tick logs: `/tmp/awl-validation-8724d01/cost-wall/logs/tick-{1..5}-implementer.log`
+- Auditor logs: `/tmp/awl-validation-8724d01/cost-wall/audits/`
+
+### Cycle-Cap Escalation
+
+Verdict: PASS after runner fix `26b0800`
+
+Observed:
+- Fixture repo: `Mohamad-Kamar/awl-gate-cycle-cap`.
+- Issue `#1`, PR `#2`, branch `loop/impl/issue-1`.
+- Initial run correctly avoided false `ready-for-human` but stalled at `needs-fix` because fixer `proof-failed` was treated as idempotent.
+- After `26b0800`, repeated failed fixer proof advanced to cycle `2` and then set `did-not-converge`.
+- Final labels: issue `#1` `["did-not-converge"]`, PR `#2` `["did-not-converge"]`.
+- Duplicate checks: branch count `1`, open loop PR count `1`.
+
+Evidence:
+- Initial failed result: `/tmp/awl-validation-8724d01/cycle-cap/RESULT.md`
+- Passing rerun audit: `/tmp/awl-validation-26b0800/cycle-cap-rerun/audit/`
+- Passing proof logs: `/tmp/awl-validation-26b0800/cycle-cap-rerun/logs/`
+
+### Cron Cadence
+
+Verdict: PASS as cron-equivalent, not actual system cron
+
+Observed:
+- Fixture repo: `Mohamad-Kamar/awl-gate-cron`.
+- Issue `#1`, PR `#2`, branch `loop/impl/issue-1`.
+- Same guarded command shape ran implementer, reviewer, and fixer under an external wall with persisted interval logs.
+- Issue and PR reached `ready-for-human` at head `8fc66c4a8b2fbcdc81c35ba500deba23ea49d80e`.
+- Later intervals no-opped: implementer reported `no trusted ready work`, reviewer reported `no reviewable loop PR`, fixer reported `no fixable loop PR`.
+- Duplicate checks: branch count `1`, PR count `1`, marker grouping count `1` for implementer and reviewer.
+
+Evidence:
+- Auditor summary: `/tmp/awl-validation-8724d01/cron-cadence/auditor-summary.txt`
+- Scheduler script: `/tmp/awl-validation-8724d01/cron-cadence/run-cron-equivalent.sh`
+- Interval logs: `/tmp/awl-validation-8724d01/cron-cadence/interval-logs/`
+- Guarded role/proof logs: `/tmp/awl-validation-8724d01/cron-cadence/logs/`
+
+### Planted-Defect Model Comparison
+
+Verdict: PASS WITH CAVEAT
+
+Observed:
+- Fixture repo: `Mohamad-Kamar/awl-gate-planted-defect`.
+- Real default reviewer and explicit `gpt-5.4` reviewer both caught the planted defect: Python `round(...)` uses half-even rounding and violates required `ROUND_HALF_UP` behavior for `subtotal_cents("1.005", 1)`.
+- The first real run exposed a parser bug: the runner accepted an echoed `VERDICT: clean` sample before the model's later `VERDICT: blocking`.
+- The second real run exposed a runner flow bug: a fragile pathspec and `errexit` control flow prevented posting `needs-fix` after a blocking verdict.
+- After `509b0ad`, a structural rerun with a fake reviewer that printed both `VERDICT: clean` and final `VERDICT: blocking` routed fresh PRs `#11` and `#12` to `needs-fix`.
+- Quality recommendation: this run shows both same-model default and `gpt-5.4` caught the planted defect; it does not prove cross-model superiority.
+
+Evidence:
+- Real default review log: `/tmp/awl-validation-b29b8ce/planted-defect-rerun/logs/guarded-review-20260629-100740-pr-11.log`
+- Real `gpt-5.4` review log: `/tmp/awl-validation-b29b8ce/planted-defect-rerun/logs/guarded-review-20260629-101059-pr-12.log`
+- Structural parser/routing audit: `/tmp/awl-validation-509b0ad/planted-defect-structural/audit/`
+- Structural review logs: `/tmp/awl-validation-509b0ad/planted-defect-structural/logs/guarded-review-20260629-102931-pr-12.log`, `/tmp/awl-validation-509b0ad/planted-defect-structural/logs/guarded-review-20260629-103008-pr-11.log`
