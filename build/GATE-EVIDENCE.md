@@ -389,3 +389,49 @@ Evidence:
 - Real `gpt-5.4` review log: `/tmp/awl-validation-b29b8ce/planted-defect-rerun/logs/guarded-review-20260629-101059-pr-12.log`
 - Structural parser/routing audit: `/tmp/awl-validation-509b0ad/planted-defect-structural/audit/`
 - Structural review logs: `/tmp/awl-validation-509b0ad/planted-defect-structural/logs/guarded-review-20260629-102931-pr-12.log`, `/tmp/awl-validation-509b0ad/planted-defect-structural/logs/guarded-review-20260629-103008-pr-11.log`
+
+## V1 Runner-Surface Validation 2026-06-29
+
+Product commit:
+- Started from `368eae8 docs(v1): clarify setup and runner surfaces`.
+- Static bootstrap UX audit passed at `368eae8`: setup docs cover `gh auth`, authenticated login, safe `trusted_actors`, label commands with `--force`, V1 runner surfaces, and no cron/GitHub Actions setup path.
+
+### Local Foreground Supervisor
+
+Verdict: PASS after template placeholder fix
+
+Observed:
+- Fixture repo: `Mohamad-Kamar/awl-v1-local-supervisor`.
+- Local clone: `/tmp/awl-v1-local-supervisor`.
+- Issue `#1`, PR `#2`, branch `loop/impl/issue-1`.
+- First start exposed a real template bug: `repo="${1:-{{repo_path}}}"` left a trailing `}` in Bash parameter expansion. Fixed `local-supervisor.sh.tmpl` to use the safer `repo="${1:-}"; [ -n "$repo" ] || repo="{{repo_path}}"` pattern.
+- After rendering the fixture supervisor, one foreground process cycled implementer, reviewer, and fixer.
+- Issue `#1` reached `ready-for-human`.
+- PR `#2` reached `ready-for-human` at head `f99efdcd5c2ea142db19cee6cf41129459c329c9`.
+- PR diff only added `mul(a, b)` and a matching test.
+- Stop via `Ctrl-C` worked.
+- Restart produced only no-op ticks: `no trusted ready work`, `no reviewable loop PR`, `no fixable loop PR`.
+- Duplicate checks: branch count `1`, PR count `1`, PR markers unchanged after restart, issue markers unchanged after restart.
+
+Evidence:
+- Issue URL: `/tmp/awl-v1-validation-368eae8/v1-local-supervisor/issue-url.txt`
+- Guarded logs: `/tmp/awl-v1-validation-368eae8/v1-local-supervisor/logs/`
+- Snapshots: `/tmp/awl-v1-validation-368eae8/v1-local-supervisor/snapshots/`
+- Branch snapshot: `/tmp/awl-v1-validation-368eae8/v1-local-supervisor/snapshots/branch-after-stop.txt`
+- PR marker baseline/restart diff inputs: `/tmp/awl-v1-validation-368eae8/v1-local-supervisor/snapshots/pr-markers-before-restart.txt`, `/tmp/awl-v1-validation-368eae8/v1-local-supervisor/snapshots/pr-markers-after-restart.txt`
+
+### Codex Automations
+
+Verdict: NEEDS LIVE RUN
+
+Observed:
+- `codex-automation.md.tmpl` is validation-ready and points automations at the guarded runner.
+- No live Codex Automation scheduling run was executed in this session.
+
+### Claude `/loop`
+
+Verdict: NEEDS LIVE CLAUDE
+
+Observed:
+- `loop.md.tmpl` emits decision-complete prompts for implementer, reviewer, and fixer.
+- Claude CLI exists locally, but `/loop` is an interactive Claude Code slash-command surface and was not live-executed in this session.

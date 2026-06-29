@@ -75,5 +75,6 @@ V1 is implemented and baseline-tested end-to-end on live private GitHub repos wi
 | No-proof, proof honesty, duplicate-claim, stale-claim, and reviewer idempotency | **Guarded-runner PASS** | T7/T8/T10/T11/T12 passed on live GitHub; see `build/GATE-RESULTS.md`. |
 | Cost wall, cycle-cap, cron-equivalent cadence, and planted-defect model comparison | **Guarded-runner PASS** | Cost wall reached `stalled`; cycle cap reached `did-not-converge`; cron-equivalent cadence converged and no-opped; default and `gpt-5.4` reviewers caught the planted defect. |
 | Browser/Playwright proof under Codex sandbox | **Known environment constraint** | Use CI or another runner when local Codex sandbox cannot run browser proof. |
-| Codex Automations, Claude `/loop`, and local foreground supervisor as V1 runner surfaces | **Needs fresh V1 validation** | The guarded tick engine is validated; the new product happy path must still be confirmed from fresh bootstrap. |
+| Local foreground supervisor as V1 runner surface | **Limited V1 GO** | Fresh fixture `awl-v1-local-supervisor` issue `#1` / PR `#2` reached `ready-for-human`; restart no-opped with one branch and one PR. |
+| Codex Automations and Claude `/loop` as V1 runner surfaces | **Needs live validation** | Templates/prompts are validation-ready, but product-native scheduling was not live-run in this session. |
 | Maintainer Loop, Core Memory, `loopctl`, evidence consolidation, multi-host adapters | **Designed for V2** | Preserved in `design/PLAN-v2-target.md`; not active in V1. |

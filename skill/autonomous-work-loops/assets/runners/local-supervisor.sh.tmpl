@@ -4,8 +4,10 @@
 # does not install cron, launchd, or other persistent scheduler entries.
 set -euo pipefail
 
-repo="${1:-{{repo_path}}}"
-interval_seconds="${AWL_SUPERVISOR_INTERVAL_SECONDS:-{{interval_seconds}}}"
+repo="${1:-}"
+[ -n "$repo" ] || repo="{{repo_path}}"
+interval_seconds="${AWL_SUPERVISOR_INTERVAL_SECONDS:-}"
+[ -n "$interval_seconds" ] || interval_seconds="{{interval_seconds}}"
 case "$interval_seconds" in ""|*"{{"*) interval_seconds=600 ;; esac
 
 runner="${repo}/.agent-loops/runners/codex.sh"
