@@ -346,7 +346,7 @@ After that, provide concise findings. Use blocking only for defects that should 
   if [ "$rc" -ne 0 ]; then
     return "$rc"
   fi
-  verdict="$(sed -n 's/^VERDICT:[[:space:]]*//Ip' "$review_log" | head -1 | tr '[:upper:]' '[:lower:]')"
+  verdict="$(sed -nE 's/^VERDICT:[[:space:]]*(clean|blocking)[[:space:]]*$/\1/Ip' "$review_log" | tail -1 | tr '[:upper:]' '[:lower:]')"
   case "$verdict" in
     clean) return 0 ;;
     blocking) return 10 ;;
