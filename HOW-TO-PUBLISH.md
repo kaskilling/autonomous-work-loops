@@ -26,8 +26,8 @@ This is the practical checklist. For the *why* behind channel choices, see `PUBL
 The repo currently has no remote. One time:
 
 ```sh
-cd /Users/mkamar/Non_Work/Projects/autonomous-work-loops
-gh repo create autonomous-work-loops --public --source=. --remote=origin --push
+cd /Users/mkamar/Non_Work/Projects/awl/autonomous-work-loops
+gh repo create kaskilling/autonomous-work-loops --public --source=. --remote=origin --push
 # (use --private first if you want a closed soft-launch)
 ```
 
