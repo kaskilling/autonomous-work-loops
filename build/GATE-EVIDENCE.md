@@ -422,16 +422,41 @@ Evidence:
 
 ### Codex Automations
 
-Verdict: NEEDS LIVE RUN
+Verdict: NO-GO for broad V1 launch
 
 Observed:
-- `codex-automation.md.tmpl` is validation-ready and points automations at the guarded runner.
-- No live Codex Automation scheduling run was executed in this session.
+- Fixture repo `Mohamad-Kamar/awl-v1-codex-automation`, clone `/tmp/awl-v1-codex-automation`.
+- Created three ACTIVE Codex app cron automations: implementer, reviewer, fixer.
+- The automations did fire: issue `#1` was claimed, branch `loop/impl/issue-1` was created, and PR `#2` opened.
+- Live failure 1: two reviewer runs overlapped on the same head and left both `needs-fix` and `ready-for-human` on the issue and PR.
+- Live failure 2: generated `.agent-loops/evidence/prove-the-gate/logs/*` files were included in the PR diff; the adversarial reviewer correctly routed that to `needs-fix`.
+- Deleted the three test Codex automations after evidence capture.
+- Patched the guarded runner to skip `.agent-loops/evidence/` during staging and to create a per-PR-head review lock before nested review.
+- Patched `codex-automation.md.tmpl` to use a command-only prompt instead of a broad "load the skill" prompt.
+- Fresh patched fixture repo `Mohamad-Kamar/awl-v1-codex-automation-lock`, clone `/tmp/awl-v1-codex-automation-lock`, still blocked: issue `#1` became `in-progress` and branch `loop/impl/issue-1` was created, but no PR, marker, or evidence log was produced.
+- Process inspection showed the outer Codex automation agent was reconstructing the workflow and requesting direct `gh` permissions, rather than only running the guarded command.
+- Deleted the three patched-fixture Codex automations after evidence capture.
+- Cleanup: removed active work labels from disposable fixtures; marked blocked Codex fixture issue/PR states `stalled`.
+
+Required before GO:
+- Bootstrap must emit a Codex Automation permission/profile setup that can run exactly the guarded command without interactive approval.
+- The automation prompt must remain command-only.
+- The reviewer lock and evidence-skip fix must be rerun on a clean fixture to terminal state.
 
 ### Claude `/loop`
 
-Verdict: NEEDS LIVE CLAUDE
+Verdict: NO-GO for broad V1 launch
 
 Observed:
-- `loop.md.tmpl` emits decision-complete prompts for implementer, reviewer, and fixer.
-- Claude CLI exists locally, but `/loop` is an interactive Claude Code slash-command surface and was not live-executed in this session.
+- Fixture repo `Mohamad-Kamar/awl-v1-claude-loop`, clone `/tmp/awl-v1-claude-loop`.
+- Claude Code 2.1.195 launched successfully in accessible terminal mode after a workspace trust prompt.
+- `/loop every 1 minute: ...` was accepted by Claude Code and created scheduled loop `99243117`.
+- The first wakeup loaded `autonomous-work-loops`, then blocked on permission prompts for reading the installed skill/reference files.
+- The guarded runner never executed: fixture issue `#1` stayed `ready`; no `loop/*` branch and no PR existed.
+- Stopped the interactive Claude process after evidence capture; `ps auxww | rg '[c]laude'` showed no remaining Claude process.
+- Cleanup: removed `ready` from the disposable Claude fixture issue.
+
+Required before GO:
+- Bootstrap must emit the Claude permission setup needed for unattended skill/reference reads and guarded runner execution.
+- The `/loop` prompt should prefer shelling out to the guarded runner when a hard external wall is required.
+- Live validation must prove implementer/reviewer/fixer loops reach a terminal PR state and can be stopped/removed.

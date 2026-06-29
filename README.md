@@ -1,6 +1,6 @@
 # autonomous-work-loops
 
-A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR workflow. It is currently **release-candidate ready for the guarded Codex path**: strict trust, allowlisted dispatch, proof honesty, no-proof routing, duplicate claims, stale recovery, cost-wall recovery, cycle caps, cron-equivalent cadence, and planted-defect review routing have live fixture evidence.
+A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR workflow. It is currently **Limited V1 GO for the local foreground supervisor**: strict trust, allowlisted dispatch, proof honesty, no-proof routing, duplicate claims, stale recovery, cost-wall recovery, cycle caps, cron-equivalent cadence, planted-defect review routing, and a fresh local-supervisor run have live fixture evidence.
 
 Tag an issue `ready`. An **Implementer** claims it, writes the change on an isolated branch, proves it, and opens a PR. A **Reviewer** adversarially reviews it. If defects are found, a **Fixer** addresses the feedback and the reviewer re-checks the new head. When proof passes and no blocking defects remain, the PR is labeled `ready-for-human` for you to merge. No human in the loop until the end.
 
@@ -39,12 +39,11 @@ Claude Code users can also install it as a plugin (see [PUBLISHING.md](PUBLISHIN
 
 # 2. Arm one runner surface
 # Recommended:
-# - Codex: Codex Automations
-# - Claude: Claude /loop
-# - Generic local: .agent-loops/runners/local-supervisor.sh "$PWD"
+# - Tested V1 path: .agent-loops/runners/local-supervisor.sh "$PWD"
+# - Needs live fix/validation: Codex Automations, Claude /loop
 ```
 
-V1 should arm one of three runner surfaces: Codex Automations, Claude `/loop`, or the local foreground supervisor. Manual guarded tick commands remain available for debugging, but they are not the intended happy path. System cron and GitHub Actions schedules are out of V1 scope.
+V1's tested happy path is the local foreground supervisor. Manual guarded tick commands remain available for debugging, but they are not the intended happy path. Codex Automations and Claude `/loop` are real target surfaces, but live validation found permission/concurrency blockers, so they are not broad-launch paths yet. System cron and GitHub Actions schedules are out of V1 scope.
 
 For step-by-step setup and first-trial instructions, see [V1-QUICKSTART.md](V1-QUICKSTART.md).
 
@@ -76,5 +75,5 @@ V1 is implemented and baseline-tested end-to-end on live private GitHub repos wi
 | Cost wall, cycle-cap, cron-equivalent cadence, and planted-defect model comparison | **Guarded-runner PASS** | Cost wall reached `stalled`; cycle cap reached `did-not-converge`; cron-equivalent cadence converged and no-opped; default and `gpt-5.4` reviewers caught the planted defect. |
 | Browser/Playwright proof under Codex sandbox | **Known environment constraint** | Use CI or another runner when local Codex sandbox cannot run browser proof. |
 | Local foreground supervisor as V1 runner surface | **Limited V1 GO** | Fresh fixture `awl-v1-local-supervisor` issue `#1` / PR `#2` reached `ready-for-human`; restart no-opped with one branch and one PR. |
-| Codex Automations and Claude `/loop` as V1 runner surfaces | **Needs live validation** | Templates/prompts are validation-ready, but product-native scheduling was not live-run in this session. |
+| Codex Automations and Claude `/loop` as V1 runner surfaces | **NO-GO** | Codex Automations fired but exposed reviewer overlap and permission/profile issues; Claude `/loop` scheduled but blocked on skill-file permissions before the guarded tick. |
 | Maintainer Loop, Core Memory, `loopctl`, evidence consolidation, multi-host adapters | **Designed for V2** | Preserved in `design/PLAN-v2-target.md`; not active in V1. |

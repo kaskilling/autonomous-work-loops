@@ -7,10 +7,9 @@ V1 turns GitHub issues labeled `ready` into proven PRs by arming one runner surf
 1. Install the skill.
 2. Bootstrap a target GitHub repo.
 3. Confirm the Bootstrap Report: proof command, trusted actors, labels, and runner surface.
-4. Arm one runner surface:
-   - Codex: Codex Automations.
-   - Claude: Claude `/loop`.
-   - Generic local: local foreground supervisor.
+4. Arm the tested runner surface:
+   - Local foreground supervisor.
+   - Codex Automations and Claude `/loop` are target profiles, but they are not V1 GO until their live permission/concurrency blockers are fixed.
 5. Create or rewrite a trusted issue and apply `ready`.
 6. Watch GitHub labels and PR markers:
    - clean path: `ready -> in-progress -> ready-for-human`
@@ -63,7 +62,21 @@ Bootstrap should render `.agent-loops/`, write a Bootstrap Report, identify the 
 
 Review the Bootstrap Report before arming a runner. In strict mode, the issue author must be listed in `.agent-loops/config.yaml` under `trusted_actors`; the bootstrap default should include the authenticated maintainer/operator, not every collaborator.
 
-## Runner Surface 1: Codex Automations
+## Runner Surface 1: Local Foreground Supervisor
+
+Use this for the current V1 trial path.
+
+Expected bootstrap output:
+
+```sh
+.agent-loops/runners/local-supervisor.sh "$PWD"
+```
+
+Start it in one terminal and leave it running. Stop it with `Ctrl-C`. It does not install cron, launchd, GitHub Actions, or any persistent scheduler.
+
+## Runner Surface 2: Codex Automations
+
+Status: target profile, not broad-launch GO.
 
 Use this when running from Codex.
 
@@ -76,9 +89,11 @@ Expected bootstrap output:
   - reviewer
   - fixer
 
-The automation prompt should run one guarded role tick and exit. It must not install cron jobs or create more automations.
+The automation prompt should run one guarded role tick and exit. It must not install cron jobs or create more automations. Live validation showed broad "load the skill" prompts are too loose; use a command-only prompt and validate the Codex permission profile before relying on this unattended.
 
-## Runner Surface 2: Claude `/loop`
+## Runner Surface 3: Claude `/loop`
+
+Status: target profile, not broad-launch GO.
 
 Use this when running from Claude Code.
 
@@ -91,17 +106,7 @@ Expected bootstrap output:
 
 Each loop prompt must load the skill, run exactly one role tick, reconstruct host state, do one unit of work, and exit.
 
-## Runner Surface 3: Local Foreground Supervisor
-
-Use this when no native recurring runner is available.
-
-Expected bootstrap output:
-
-```sh
-.agent-loops/runners/local-supervisor.sh "$PWD"
-```
-
-Start it in one terminal and leave it running. Stop it with `Ctrl-C`. It does not install cron, launchd, GitHub Actions, or any persistent scheduler.
+Live validation showed Claude Code can create the scheduled `/loop`, but a fresh fixture blocked on skill/reference file permissions before the guarded tick. Validate the Claude permission setup before relying on this unattended.
 
 ## Manual Debug Commands
 

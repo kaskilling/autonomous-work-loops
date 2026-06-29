@@ -14,3 +14,7 @@ The external cost wall (ADR-0007): `/loop` does not impose a per-iteration OS ti
 (b) rely on the tick's own state-derived budget checks plus a low `max_runtime_minutes_per_loop`
 that the tick honors and the next iteration enforces. Prefer the guarded `codex.sh`
 runner when a hard OS-level wall is required.
+
+Live validation note: Claude Code created the scheduled `/loop`, but the first wakeup
+blocked on skill-file read permissions in a fresh fixture. Treat this profile as
+needs-live-validation until bootstrap emits the required Claude permission setup.

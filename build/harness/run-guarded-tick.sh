@@ -290,15 +290,24 @@ stage_non_generated() {
   python3 - <<'PY' | while IFS= read -r path; do git add "$path"; done
 import subprocess
 skip = ("/__pycache__/", "__pycache__/", ".pyc")
+skip_prefixes = (".agent-loops/evidence/",)
 out = subprocess.check_output(["git", "status", "--porcelain"], text=True)
 for line in out.splitlines():
     if not line:
         continue
     path = line[3:]
+    if path.startswith(skip_prefixes):
+        continue
     if any(s in path for s in skip) or path.endswith(".pyc"):
         continue
     print(path)
 PY
+}
+
+claim_review_lock() {
+  local pr="$1" head="$2" lock_ref
+  lock_ref="refs/heads/loop/review/pr-${pr}-${head}"
+  git push origin "${head}:${lock_ref}" >/dev/null 2>&1
 }
 
 run_nested_review() {
@@ -494,6 +503,10 @@ reviewer() {
     prior_verdict="$(latest_review_verdict_for_head "$pr" "$repo_slug" "$head")"
     if [ "$prior_verdict" = "ready-for-human" ] || [ "$prior_verdict" = "unproven" ] || [ "$prior_verdict" = "did-not-converge" ]; then
       echo "reviewer no-op: PR #${pr} head ${head} already reviewed with verdict=${prior_verdict}"
+      return 0
+    fi
+    if ! claim_review_lock "$pr" "$head"; then
+      echo "reviewer no-op: PR #${pr} head ${head} already has an active review lock"
       return 0
     fi
     cycle="$(latest_cycle "$pr" "$repo_slug")"
