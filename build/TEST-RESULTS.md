@@ -43,11 +43,11 @@ These are properties of running ticks inside codex's managed sandbox on this mac
 2. **No `timeout` binary on macOS** → installed coreutils (`gtimeout`); runner prefers timeout→gtimeout→shell-fallback. **Fixed.**
 3. **`.git` writes blocked** in the repo's own `.git` → codex worked around it by doing git ops from a writable temp clone/archive. Self-healed by the agent; worth noting for DX.
 4. **`danger-full-access` forbidden headlessly by managed enterprise policy** → **browser-based proof (Playwright/Chromium) cannot run inside a codex tick on this machine.** This is why the test target was swapped from `diff-tool` (Playwright) to `ttl-cache` (pytest). Pure unit/build proofs work; browser e2e proofs need a different execution surface (Claude-as-runner, or CI).
-5. **Transient `/tmp` policy block**: the fixer's first run was blocked mid-workaround "by policy" and posted no marker (loop would have stalled). A **single re-tick succeeded** — but this is a real robustness note: a tick that dies mid-workaround leaves no marker, and only the stale-claim/re-trigger path recovers it. Acceptable for cron (next tick retries) but worth hardening.
+5. **Transient `/tmp` policy block**: the fixer's first run was blocked mid-workaround "by policy" and posted no marker (loop would have stalled). A **single re-tick succeeded** — but this is a real robustness note: a tick that dies mid-workaround leaves no marker, and only the stale-claim/re-trigger path recovers it. Acceptable for a recurring V1 runner surface because the next tick retries, but worth hardening.
 
 ## Eval matrix status
 
-Only the **baseline variant** (same-model review, pytest proof, permissive trust, manual-sequential ticks) was run to convergence — and it passed cleanly. The other matrix axes (cross-model review, forced `unproven`, strict-trust rejection, true unattended cron) are **not yet run**. The baseline is sufficient to declare the core system *works*; the remaining variants are quality/coverage comparisons, not pass/fail gates.
+Only the **baseline variant** (same-model review, pytest proof, permissive trust, manual-sequential ticks) was run to convergence in this first live run. Later guarded-runner results supersede the open safety matrix items; see `build/GATE-RESULTS.md`. The remaining scheduler claim is V1 runner cadence, not actual system cron.
 
 ## Best-setup verdict (provisional)
 

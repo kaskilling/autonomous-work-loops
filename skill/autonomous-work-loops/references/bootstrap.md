@@ -7,14 +7,34 @@ Bootstrap mode sets up `.agent-loops/` in the target repository and exits. It di
 ## Discovery Checklist
 
 1. Confirm the repo host is GitHub for V1. Use `adapter-github.md` as the only V1 host implementation.
-2. Identify default branch, current remote, repository visibility, explicit loop dispatchers, and whether issues and pull requests are enabled.
-3. Discover proof commands for `test`, `build`, and `lint` from package scripts, build files, CI workflows, README instructions, and existing developer docs.
-4. Infer trust posture:
+2. Confirm GitHub CLI access before writing config:
+   - `gh auth status`
+   - `gh api user --jq .login`
+   - `gh repo view --json nameWithOwner,owner,visibility,viewerPermission,defaultBranchRef,hasIssuesEnabled`
+3. Identify default branch, current remote, repository visibility, explicit loop dispatchers, and whether issues and pull requests are enabled.
+4. Discover proof commands for `test`, `build`, and `lint` from package scripts, build files, CI workflows, README instructions, and existing developer docs.
+5. Infer trust posture:
    - `permissive` for solo private repos.
    - `strict` for public or multi-contributor repos.
-5. Build `trusted_actors` from explicit maintainers, owners, or named loop dispatchers. Do not add every collaborator by default. Leave the list editable.
-6. Choose runner surface and render from `assets/runners/`: `codex.sh.tmpl` (default for a Codex-driven local loop), `cron.sh.tmpl` (generic agent), `loop.md.tmpl` (Claude Code `/loop`), or `github-actions.yml.tmpl` (scheduled CI). The Codex runner is guarded: the parent shell owns trust, claim, Git mutation, proof, PRs, labels, and markers; nested Codex edits the working tree only. This avoids managed-sandbox `.git` write denial while keeping the branch-ref claim deterministic. Headless agents load the skill by PROMPT, not by `--skill/--role` flags. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications.
-7. Render `.agent-loops/config.yaml`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
+6. Build `trusted_actors` from the authenticated GitHub login, explicit maintainers, owners, or named loop dispatchers. Add the authenticated login when `gh api user --jq .login` succeeds and the user is the repo owner, has maintainer/admin/write permission, or is the person explicitly setting up the loop. Do not add every collaborator by default. Leave the list editable. If the authenticated login cannot be proven, stop and ask the user to run `gh auth login`.
+7. Choose one V1 runner surface: Codex Automations when running in Codex, Claude `/loop` when running in Claude Code, or the local foreground supervisor when no native recurring runner is available. Render from `assets/runners/`: `codex.sh.tmpl` for guarded Codex ticks, `codex-automation.md.tmpl` for Codex automation prompts, `loop.md.tmpl` for Claude Code `/loop`, and `local-supervisor.sh.tmpl` for the foreground fallback. The Codex runner is guarded: the parent shell owns trust, claim, Git mutation, proof, PRs, labels, and markers; nested Codex edits the working tree only. This avoids managed-sandbox `.git` write denial while keeping the branch-ref claim deterministic. Headless agents load the skill by PROMPT, not by `--skill/--role` flags. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications. Do not install system cron or GitHub Actions schedules during V1 bootstrap.
+8. Render `.agent-loops/config.yaml`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
+
+## Required Labels
+
+Bootstrap must either create these labels with user approval or print the exact commands in the Bootstrap Report:
+
+```sh
+gh label create ready --color 0E8A16 --description "Trusted work ready for autonomous-work-loops intake" --force
+gh label create in-progress --color FBCA04 --description "Autonomous-work-loops has claimed this work" --force
+gh label create needs-fix --color D93F0B --description "Reviewer found blocking defects or proof failed" --force
+gh label create ready-for-human --color 5319E7 --description "Proof passed and autonomous review converged" --force
+gh label create unproven --color BFDADC --description "No accepted proof command is configured or available" --force
+gh label create did-not-converge --color B60205 --description "Review/fix cycle cap reached with blockers remaining" --force
+gh label create stalled --color 000000 --description "Runner exceeded retry or runtime wall and needs a human" --force
+```
+
+Do not treat missing labels as a background concern. Without these labels, the state machine is not visible or operable.
 
 ## Setup Model
 
@@ -28,7 +48,7 @@ Write a Bootstrap Report in the target repo or in the conversation. Include:
 
 - `trust_posture`, why it was inferred, and the editable `trusted_actors` list. In strict mode, only issues authored by these actors are executable; external work needs a trusted-authored dispatch issue.
 - Proof commands found or missing. Missing proof is a human gate and prevents autonomous convergence.
-- Runner surface and credential boundary. CI runners require a scoped bot token, not silent reuse of personal local credentials.
+- Runner surface and credential boundary. Codex Automations, Claude `/loop`, and local foreground supervisor are the V1 runner choices. Manual guarded ticks are for debugging. Hosted CI/bot runners require a scoped bot token and are outside the V1 default.
 - Budget defaults and any requested changes. Budget increases require human approval.
 - Reviewer model. Empty `reviewer_model` means same-model adversarial review; a configured override is the recommended quality upgrade.
 
@@ -47,8 +67,10 @@ Write a Bootstrap Report in the target repo or in the conversation. Include:
 # Autonomous Work Loops Bootstrap Report
 
 - Host: GitHub
+- Authenticated GitHub user:
 - Trust posture:
 - Trusted actors:
+- Required labels:
 - Proof commands:
   - test:
   - build:

@@ -21,3 +21,5 @@ for root in "$HOME/.claude/skills" "$HOME/.codex/skills" "$HOME/.agents/skills";
   fi
   printf '%s\n' "installed $dest"
 done
+
+printf '%s\n' "next: in each target repo, install/authenticate GitHub CLI with: gh auth login && gh auth status"

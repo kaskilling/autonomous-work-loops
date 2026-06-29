@@ -2,14 +2,17 @@
 
 ## Before broad public release: the gates that matter
 
-The baseline v1 acceptance test passed once on a live private GitHub repo, the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues, allowlisted dispatch acceptance passes, and the guarded Codex runner now claims and converges on live GitHub. No-proof routing, ready-for-human honesty, reviewer idempotency, duplicate-claim race behavior, stale-claim recovery, cost-wall recovery, cycle-cap escalation, cron-equivalent cadence, and planted-defect review routing also pass on guarded fixture runs. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. Before broad public release, run one final release-candidate smoke from a fresh install:
+The baseline v1 acceptance test passed once on a live private GitHub repo, the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues, allowlisted dispatch acceptance passes, and the guarded Codex runner now claims and converges on live GitHub. No-proof routing, ready-for-human honesty, reviewer idempotency, duplicate-claim race behavior, stale-claim recovery, cost-wall recovery, cycle-cap escalation, cron-equivalent cadence, and planted-defect review routing also pass on guarded fixture runs. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. The V1 product happy path is now one of three local runner surfaces: Codex Automations, Claude `/loop`, or local foreground supervisor.
+
+Before broad public release, run one final release-candidate smoke from a fresh install:
 
 1. Create a small repo with a real test command and 1–2 `ready` issues.
 2. Bootstrap: `/autonomous-work-loops`.
-3. Run the three roles a few ticks each (locally, under `timeout`).
-4. Confirm: one `ready` issue → claimed → proven PR → `ready-for-human`. A clean proven PR may converge on the first review; review→fix cycles happen only when defects are found.
+3. Arm one V1 runner surface: Codex Automations, Claude `/loop`, or the local foreground supervisor.
+4. Confirm: one `ready` issue -> claimed -> proven PR -> `ready-for-human`. A clean proven PR may converge on the first review; review->fix cycles happen only when defects are found.
+5. Confirm later intervals no-op cleanly and create no duplicate branch, PR, or review marker.
 
-The guarded-runner matrix is now release-candidate ready, not a claim that every execution surface is proven. The cron row is cron-equivalent, not actual system cron. Browser/Playwright proof remains out of scope unless run in CI or another compatible non-sandboxed surface.
+The guarded-runner matrix is now release-candidate ready, not a claim that every execution surface is proven. The cadence row is cron-equivalent evidence for the runner/state machine, not actual system cron. System cron and GitHub Actions schedule are out of V1 scope. Browser/Playwright proof remains out of scope unless run in a compatible non-sandboxed surface.
 
 ## How to publish (three channels, pick based on audience)
 

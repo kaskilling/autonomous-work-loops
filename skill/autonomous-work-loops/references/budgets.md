@@ -27,7 +27,7 @@ budgets:
 
 ## Runner-Enforced Limits
 
-Runtime and cost can be exceeded while the agent is busy, so the runner must wrap every tick in an external wall. Local cron uses `timeout`; GitHub Actions uses `timeout-minutes`; `/loop` runners must include the same wall in the command they invoke.
+Runtime and cost can be exceeded while the agent is busy, so the runner must wrap every tick in the strongest external wall its surface supports. The guarded Codex runner and local foreground supervisor use `timeout`, `gtimeout`, or their shell fallback. Codex Automations should invoke the guarded runner when available. Claude `/loop` must either shell out through a guarded runner or record the weaker guarantee in the Bootstrap Report. GitHub Actions schedules are outside V1.
 
 ## Killed Ticks
 

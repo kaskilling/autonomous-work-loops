@@ -15,15 +15,15 @@ This is the practical checklist. For the *why* behind channel choices, see `PUBL
 | Safety-critical trust gate enforced in the privileged op | ✅ T2/T3/T4 author-only retest passed (`build/GATE-RESULTS.md`) |
 | Docs match shipped behavior (no phantom flags, no stale cycle claims) | ✅ swept |
 | Baseline live run passed (GitHub + Codex + pytest) | ✅ once |
-| Full validation matrix (strict-trust, no-proof, failed-proof, cron, dup-claim, stale-claim, browser/CI proof) | ❌ strict rejection passed; allowlisted dispatch T5 blocked by Codex `.git`; failed-proof passed; remaining rows not run |
+| Full validation matrix (strict-trust, no-proof, failed-proof, runner cadence, dup-claim, stale-claim, browser-compatible proof) | ✅ guarded-runner matrix is release-candidate ready in `build/GATE-RESULTS.md`; browser/Playwright proof still needs a compatible non-sandboxed surface |
 
-**Recommendation:** do **not** publish yet. Prove the allowlisted dispatch path on a Git-capable Codex surface, then continue the remaining safety matrix. The previous soft-launch recommendation is superseded by `build/GATE-RESULTS.md`.
+**Recommendation:** keep this in targeted validation until one fresh-install release-candidate smoke passes on one V1 runner surface. The previous soft-launch recommendation is superseded by `build/GATE-RESULTS.md`.
 
 ---
 
-## Step 0 — Put it on GitHub (required for every channel)
+## Step 0 — Confirm GitHub publishing state
 
-The repo currently has no remote. One time:
+The product repo is published at `https://github.com/kaskilling/autonomous-work-loops`. For a new fork or fresh clone, create the remote once:
 
 ```sh
 cd <local checkout>/autonomous-work-loops

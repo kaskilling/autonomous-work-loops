@@ -9,6 +9,7 @@ proof:
 trusted_actors: []
 trust_posture: strict # permissive | strict
 # In strict mode, only issues authored by trusted_actors are executable.
+# Bootstrap should fill the authenticated gh login when it is the maintainer/operator.
 # External requests need a trusted maintainer to create a dispatch issue.
 
 labels:

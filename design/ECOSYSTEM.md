@@ -64,11 +64,13 @@ Too much machinery for a folder of markdown; the security-conscious audience (ru
 
 ## 5. Runner / heartbeat hosting (the part users actually operate)
 
-The skill *emits* runner artifacts; it does not host them. Per ADR-0007 the runner is also the budget wall. Bootstrap should offer these execution surfaces, cheapest-first:
+The skill *emits* or asks the host app to create runner artifacts; it does not host a daemon. Per ADR-0007 the runner is also the budget wall. Bootstrap should offer these V1 execution surfaces:
 
-1. **Local cron + runner script** — `*/15 * * * * /repo/.agent-loops/runners/reviewer.sh`. The runner wraps a prompt-based headless agent invocation in `timeout`/`gtimeout`. Matches the video. Default for solo/local.
-2. **`/loop` (Claude Code)** — the built-in recurring invocation; the runner is a `/loop` entry per role.
-3. **CI schedule (GitHub Actions `schedule:`)** — for hands-off/team use; the wall is the job `timeout-minutes`. Requires the credential-boundary Critical Decision (a bot/service token, not the user's local creds — see ADR cluster on credentials in PLAN/CONTEXT).
+1. **Codex Automations** — default when bootstrap is running in Codex. Create three recurring automations, one for each role, against the repo.
+2. **`/loop` (Claude Code)** — default when bootstrap is running in Claude Code. Create one recurring loop prompt per role.
+3. **Local foreground supervisor** — fallback when the agent product cannot create a native recurring runner. The user starts one terminal process; it cycles guarded implementer/reviewer/fixer ticks until stopped.
+
+Manual guarded ticks remain the debugging surface, not the product happy path. Local system cron is excluded from V1 because it needs owned install/update/uninstall and cleanup semantics. GitHub Actions scheduling is also excluded from V1; a hosted CI or bot runner has enough credential, billing, and operational surface to be a separate project unless a later design explicitly adopts it.
 
 The skill ships these as **templates in `assets/runners/`**, rendered with the repo's discovered values during bootstrap.
 
@@ -78,12 +80,12 @@ Headless agents load the skill by prompt, not by phantom `--skill`/`--role` flag
 
 Because tick mode runs unattended with whatever credentials the runner has:
 - Local runner → the user's own `gh`/git creds. Fine for solo/private.
-- CI/scheduled runner → must use a scoped bot token; this is a Critical Decision surfaced in the Bootstrap Report, never silently inherited.
+- Hosted CI/bot runner → must use a scoped bot token; this is a separate product surface, not a V1 default.
 - The trust-gated intake (ADR-0004) and human gates are what make it safe to point a credentialed runner at a public repo.
 
 ## 7. Summary decision
 
 - **Package**: single git repo, skill-folder-at-root layout (Option B), with a `.claude-plugin/` wrapper for marketplace install (Option C overall).
 - **Install**: `install.sh` symlinks one clone into all three skill dirs; `/plugin` for Claude users.
-- **Heartbeat**: emitted runner templates (cron/`/loop`/CI), never hosted by the skill.
+- **Heartbeat**: V1 arms Codex Automations, Claude `/loop`, or a local foreground supervisor. Manual guarded ticks are retained for debugging.
 - **Lead marketing message**: multi-agent converging PR factory vs. ralph-loop's single-agent retry.

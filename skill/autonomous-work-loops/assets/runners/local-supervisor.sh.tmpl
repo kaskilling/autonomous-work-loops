@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Local foreground supervisor for autonomous-work-loops.
+# Start this once in a terminal and leave it running. It is not a daemon and it
+# does not install cron, launchd, or other persistent scheduler entries.
+set -euo pipefail
+
+repo="${1:-{{repo_path}}}"
+interval_seconds="${AWL_SUPERVISOR_INTERVAL_SECONDS:-{{interval_seconds}}}"
+case "$interval_seconds" in ""|*"{{"*) interval_seconds=600 ;; esac
+
+runner="${repo}/.agent-loops/runners/codex.sh"
+if [ ! -x "$runner" ]; then
+  echo "Missing executable guarded runner: $runner" >&2
+  exit 1
+fi
+
+while true; do
+  ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  echo "[$ts] autonomous-work-loops supervisor tick"
+
+  "$runner" "$repo" implementer || true
+  "$runner" "$repo" reviewer || true
+  "$runner" "$repo" fixer || true
+
+  sleep "$interval_seconds"
+done

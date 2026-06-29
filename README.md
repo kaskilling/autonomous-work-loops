@@ -4,13 +4,23 @@ A portable agent **skill** that turns a repo into a reviewed, converging, multi-
 
 Tag an issue `ready`. An **Implementer** claims it, writes the change on an isolated branch, proves it, and opens a PR. A **Reviewer** adversarially reviews it. If defects are found, a **Fixer** addresses the feedback and the reviewer re-checks the new head. When proof passes and no blocking defects remain, the PR is labeled `ready-for-human` for you to merge. No human in the loop until the end.
 
-It is **not a daemon**. It's a bootstrapper plus a stateless single-tick executor: an external scheduler (cron, `/loop`, or CI) re-invokes one role per tick, and all state lives on the host (labels + commit-stamped marker comments), never in agent memory.
+It is **not a daemon**. It's a bootstrapper plus a stateless single-tick executor: an explicit runner surface re-invokes one role per tick, and all state lives on the host (labels + commit-stamped marker comments), never in agent memory.
 
 ## How it differs from `ralph-loop`
 
 `ralph-loop` feeds one prompt back to one agent until a promise is true. `autonomous-work-loops` runs **three coordinated roles** with host-state-driven convergence, adversarial proof-anchored review, trust-gated work intake, atomic multi-machine claiming, and enforced cost walls. Single-agent retry vs. a multi-agent reviewed pipeline.
 
 ## Install
+
+Prerequisites for a target repo:
+
+```sh
+brew install gh coreutils
+gh auth login
+gh auth status
+```
+
+`gh` is required because V1 uses GitHub issues, PRs, labels, and comments as the host state. `coreutils` provides `gtimeout` on macOS for the guarded runner's external wall.
 
 ```sh
 # clone, then install into all three skill dirs (.claude, .codex, .agents)
@@ -25,11 +35,18 @@ Claude Code users can also install it as a plugin (see [PUBLISHING.md](PUBLISHIN
 ```
 # 1. Bootstrap once per repo
 /autonomous-work-loops          # or: "set up autonomous work loops here"
-# -> discovers host/proof/trust, renders .agent-loops/, emits runners, writes a Bootstrap Report
+# -> discovers host/proof/trust/current gh user, renders .agent-loops/, emits runners, writes a Bootstrap Report
 
-# 2. Let a scheduler run ticks (the runner is the cost wall)
-*/15 * * * * /repo/.agent-loops/runners/reviewer.sh
+# 2. Arm one runner surface
+# Recommended:
+# - Codex: Codex Automations
+# - Claude: Claude /loop
+# - Generic local: .agent-loops/runners/local-supervisor.sh "$PWD"
 ```
+
+V1 should arm one of three runner surfaces: Codex Automations, Claude `/loop`, or the local foreground supervisor. Manual guarded tick commands remain available for debugging, but they are not the intended happy path. System cron and GitHub Actions schedules are out of V1 scope.
+
+For step-by-step setup and first-trial instructions, see [V1-QUICKSTART.md](V1-QUICKSTART.md).
 
 ## Safety (read before pointing it at a credentialed repo)
 
@@ -58,4 +75,5 @@ V1 is implemented and baseline-tested end-to-end on live private GitHub repos wi
 | No-proof, proof honesty, duplicate-claim, stale-claim, and reviewer idempotency | **Guarded-runner PASS** | T7/T8/T10/T11/T12 passed on live GitHub; see `build/GATE-RESULTS.md`. |
 | Cost wall, cycle-cap, cron-equivalent cadence, and planted-defect model comparison | **Guarded-runner PASS** | Cost wall reached `stalled`; cycle cap reached `did-not-converge`; cron-equivalent cadence converged and no-opped; default and `gpt-5.4` reviewers caught the planted defect. |
 | Browser/Playwright proof under Codex sandbox | **Known environment constraint** | Use CI or another runner when local Codex sandbox cannot run browser proof. |
+| Codex Automations, Claude `/loop`, and local foreground supervisor as V1 runner surfaces | **Needs fresh V1 validation** | The guarded tick engine is validated; the new product happy path must still be confirmed from fresh bootstrap. |
 | Maintainer Loop, Core Memory, `loopctl`, evidence consolidation, multi-host adapters | **Designed for V2** | Preserved in `design/PLAN-v2-target.md`; not active in V1. |

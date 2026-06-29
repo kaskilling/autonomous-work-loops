@@ -1,7 +1,9 @@
 # TEST PLAN — Validating `autonomous-work-loops` on a live repo
 
 
-**Gate smoke update 2026-06-28:** `build/GATE-RESULTS.md` records NO-GO for public release. Author-only strict rejection now passes in T2/T3/T4; failed-proof routing passed in T6; T5 allowlisted dispatch passes with issue `#9` and PR `#10`; and the guarded Codex runner passes with issue `#11` and PR `#12`. The widened guarded-runner pass also covers T7 no-proof routing, T8 ready-for-human honesty, T10 idempotency, T11 duplicate-claim race behavior, and T12 stale-claim recovery. The next validation step is cost wall kill proof, cycle-cap escalation, cron cadence, and planted-defect model-comparison runs without reopening T2/T3/T4/T5 unless strict-trust semantics change.
+**Scheduler update 2026-06-29:** V1 should arm Codex Automations, Claude `/loop`, or a local foreground supervisor. Manual guarded Codex ticks are the debugging path, not the product happy path. The widened gate has cron-equivalent cadence evidence, not actual system-cron install/uninstall evidence. Real crontab support is outside V1 and must prove install, update, uninstall, environment, logging, overlap, timeout, and cleanup behavior before docs claim cron support. GitHub Actions scheduling is also outside V1 and should be treated as a hosted CI/bot product surface.
+
+**Gate smoke update 2026-06-28:** `build/GATE-RESULTS.md` records NO-GO for public release. Author-only strict rejection now passes in T2/T3/T4; failed-proof routing passed in T6; T5 allowlisted dispatch passes with issue `#9` and PR `#10`; and the guarded Codex runner passes with issue `#11` and PR `#12`. The widened guarded-runner pass also covers T7 no-proof routing, T8 ready-for-human honesty, T10 idempotency, T11 duplicate-claim race behavior, and T12 stale-claim recovery. The next validation step is cost wall kill proof, cycle-cap escalation, native/local runner cadence, and planted-defect model-comparison runs without reopening T2/T3/T4/T5 unless strict-trust semantics change.
 
 **Status update 2026-06-26:** the baseline live GitHub acceptance run has now passed on `ttl-cache-loop-test`; see `TEST-RESULTS.md`. This file remains the validation plan for remaining variants and release hardening.
 
@@ -10,7 +12,7 @@ The acceptance test: **one `ready` issue → a converged, proven, mergeable PR, 
 ## Decisions locked (from grilling)
 
 - **Test repo**: new **private** repo `diff-tool-loop-test` under `Mohamad-Kamar`, seeded from `mac-diff-tool` (`katooling/diff-tool` code). Isolated blast radius, real host.
-- **Cadence**: **real cron loop** (unattended) is the target. We still run a manual smoke tick of each role first (cheap insurance) before arming cron — recorded as Phase 2a.
+- **Cadence**: Codex Automations, Claude `/loop`, or local foreground supervisor are the V1 runner surfaces. Cron-equivalent cadence can validate the runner/state machine without mutating a user's crontab. Actual system cron is excluded from V1.
 - **Work**: 2–3 small real diff-tool features as issues (drafted below, pending your approval).
 - **Loop engine**: **Codex CLI**. One tick = one `codex exec` invocation whose prompt says *"load the autonomous-work-loops skill and run a `<role>` tick in this repo."* (Verified: codex reads the skill and selects the correct references headlessly.)
 
@@ -36,10 +38,12 @@ Duplicate code into the new private repo, push, create the 4 workflow labels (`r
 Run the skill in bootstrap mode in the test repo. Expect: `.agent-loops/` rendered with `host: github`, discovered `proof.test: npm run test:e2e`, `trust_posture: permissive` (private repo), `trusted_actors: [Mohamad-Kamar]`, and a Bootstrap Report. **Eval checkpoint B1**: does discovery correctly find the Playwright proof command and the right trust posture unprompted?
 
 ### Phase 2a — Manual smoke tick per role
-Label one issue `ready`. Run implementer tick manually, inspect host state, then reviewer, then fixer. **Eval checkpoint S1–S3** (see matrix). Cheap proof the mechanics work before cron.
+Label one issue `ready`. Run implementer tick manually, inspect host state, then reviewer, then fixer. **Eval checkpoint S1–S3** (see matrix). Cheap proof the mechanics work before arming a recurring runner surface.
 
-### Phase 3 — Armed cron loop (the real test)
-Install cron runners for all three roles (implementer every 15m, reviewer/fixer every 10m, offset). Label the approved issues `ready`. Let it run. Capture the full label/marker timeline.
+### Phase 3 — Scheduler cadence validation
+For V1, validate at least one V1 runner surface: Codex Automations, Claude `/loop`, or local foreground supervisor. The cron-equivalent scripted cadence is acceptable only as a guardrail for the runner/state machine, not as the user-facing scheduler claim. Capture the full label/marker timeline and prove later intervals no-op cleanly.
+
+Do not install real system cron in this phase. Do not add GitHub Actions schedule as the V1 default. Real cron and hosted CI/bot orchestration are separate product surfaces.
 
 ### Phase 4 — Evaluate + pick best setup
 Score against the acceptance criteria and the eval matrix; write findings.
@@ -62,10 +66,22 @@ with ALL of these invariants holding (each is grep-checkable from issue/PR marke
 | A4 | Clean proven first pass may converge immediately; review→fix cycles happen only when blocking defects are found, and never exceed the cap | 0003 |
 | A5 | A tick re-invoked on an unchanged head SHA was a no-op (idempotent) | 0001/0002 |
 | A6 | `ready-for-human` label appears ONLY on proven+converged PRs; `unproven`/`did-not-converge` use their own labels | 0005/0010 |
-| A7 | No tick exceeded the runtime wall (cron `timeout`/`gtimeout` enforced) | 0007 |
+| A7 | No tick exceeded the runtime wall (`timeout`/`gtimeout` or host wall enforced) | 0007 |
 | A8 | Markers are versioned (`v=1`) and parseable | 0002 |
 
 A run **FAILS** (and we learn from it) if: duplicate work appears (A2), a PR converges without proof (A3/A6), a reviewer misses a planted blocking defect, it loops past the cycle cap instead of escalating (0003), or a tick re-does work on an unchanged head (A5).
+
+## V1 runner-surface validation
+
+Run these before claiming V1 product GO:
+
+| Surface | Required proof |
+|---|---|
+| Codex Automations | Fresh bootstrap suggests or creates implementer/reviewer/fixer automations; one `ready` issue reaches `ready-for-human` or a human-gated terminal label; later automation intervals no-op; no duplicate branch, PR, or marker. |
+| Claude `/loop` | Fresh bootstrap emits one loop prompt per role; loops process one `ready` issue to terminal state; re-review on unchanged head no-ops; stopping the loops leaves no hidden scheduler state. |
+| Local foreground supervisor | `bash -n` passes; foreground run cycles roles without manual ticks; one `ready` issue reaches terminal state; `Ctrl-C` stops it; restart no-ops on already-terminal work. |
+
+At least one product-native surface must pass for a limited V1 GO. All three should pass before broad public launch.
 
 ## Eval matrix — which setup works best
 
@@ -74,13 +90,13 @@ Run the happy-path issue under these variations and compare convergence quality 
 | Axis | Variant A | Variant B | What we learn |
 |------|-----------|-----------|---------------|
 | Review model | same model (reviewer_model empty) | cross-model (`reviewer_model` = a different codex/Claude model) | Does cross-model review catch defects same-model rubber-stamps? (ADR-0010) |
-| Cadence | manual single ticks | cron unattended | Does the scheduler path hold up vs hand-driven? |
+| Cadence | V1 runner surface | cron-equivalent scripted cadence | Does the repeated guarded command shape hold up without hand-driven ticks? |
 | Proof present | proof configured | proof blanked (force `unproven`) | Confirms no-proof never auto-converges (ADR-0005 amendment) |
 | Trust posture | permissive (private) | strict author-only dispatch (reject non-allowlisted author; accept allowlisted dispatch issue) | Confirms trust gate blocks untrusted intake without becoming deny-all (ADR-0004) |
 
-Additional release-hardening rows: failed proof routes to `needs-fix`; duplicate claim race creates one branch/PR; stale claim recovers or escalates to `stalled`; browser proof runs on a compatible CI or non-sandboxed execution surface.
+Additional release-hardening rows: failed proof routes to `needs-fix`; duplicate claim race creates one branch/PR; stale claim recovers or escalates to `stalled`; browser proof runs on a compatible non-sandboxed execution surface; actual system cron install/uninstall is validated before any cron support claim.
 
-Sequencing constraint: this matrix starts after the guarded-runner PASS. The remaining release blockers are cost-wall kill proof, cycle-cap escalation, unattended cron cadence, and planted-defect model comparison, not the strict trust or claim transport path.
+Sequencing constraint: this matrix starts after the guarded-runner PASS. The remaining release blockers are cost-wall kill proof, cycle-cap escalation, V1 runner cadence, and planted-defect model comparison, not the strict trust or claim transport path. Actual system cron and GitHub Actions schedule are outside this V1 guarded-runner release gate.
 
 Scoring per run: (1) did it converge? (2) cycles to converge, (3) wall-clock + codex tokens, (4) defects the reviewer caught vs. defects that slipped to `ready-for-human` (we plant one subtle bug to measure this), (5) any invariant violation.
 

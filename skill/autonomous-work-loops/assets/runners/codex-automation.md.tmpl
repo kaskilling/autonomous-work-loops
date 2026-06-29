@@ -1,0 +1,31 @@
+# Codex Automation runner profile
+
+Use this profile when bootstrap runs inside the Codex app and the user chooses
+Codex as the runner surface. Create three recurring project automations, one per
+role, against `{{repo_path}}`.
+
+Recommended cadence:
+
+```text
+implementer: every {{implementer_interval}}
+reviewer: every {{reviewer_interval}}
+fixer: every {{fixer_interval}}
+```
+
+Automation prompt for each role:
+
+```text
+Load the autonomous-work-loops skill and run exactly one {{role}} tick in {{repo_path}}.
+
+Use the guarded Codex runner if it exists:
+
+{{repo_path}}/.agent-loops/runners/codex.sh "{{repo_path}}" {{role}}
+
+Reconstruct all state from GitHub and .agent-loops/ before acting. Do one unit of
+work and exit. Do not install cron jobs. Do not create additional scheduled
+automations. If no work is eligible, no-op and report that state.
+```
+
+Use project/worktree automation when isolation from the user's active checkout is
+more important than direct local edits. Use local project automation only when
+the user accepts that scheduled runs can mutate the current checkout.

@@ -1,6 +1,6 @@
 # BUILD PLAN — `autonomous-work-loops` skill (V1)
 
-Historical note: this was the original V1 build plan. ADR-0003 was amended after the first live test, so the current skill converges on a clean proven first pass and does not require a mandatory fix cycle. ADR-0004 was later tightened after gate validation: strict trust is now author-only dispatch, not collaborator or vouch inference. Treat the body below as historical where it conflicts with current ADRs.
+Historical note: this was the original V1 build plan. ADR-0003 was amended after the first live test, so the current skill converges on a clean proven first pass and does not require a mandatory fix cycle. ADR-0004 was later tightened after gate validation: strict trust is now author-only dispatch, not collaborator or vouch inference. The V1 runner surface was also narrowed to Codex Automations, Claude `/loop`, or the local foreground supervisor; system cron installation and GitHub Actions schedules are outside V1. Treat the body below as historical where it conflicts with current ADRs.
 
 You are an autonomous build agent. Build a **skill** named `autonomous-work-loops` exactly to this spec. This plan is self-contained; the authoritative design rationale is in `../design/adr/` (read `0000-index.md` first, then any ADR you need). Do **not** re-litigate design decisions — they are settled. Your job is to render them into a working skill.
 
@@ -35,9 +35,10 @@ skill/autonomous-work-loops/
     │   ├── config.yaml           # Annotated, with the V2 keys present-but-dormant
     │   └── playbooks/{implementer,reviewer,fixer}.md
     ├── runners/
-    │   ├── cron.sh.tmpl          # `timeout N <agent-cmd> "Load the skill and run one <role> tick"` (budget wall)
+    │   ├── codex.sh.tmpl         # guarded Codex tick runner; parent shell owns Git/GitHub mutation
+    │   ├── codex-automation.md.tmpl # Codex Automation prompts, one per role
     │   ├── loop.md.tmpl          # /loop invocation per role (Claude Code)
-    │   └── github-actions.yml.tmpl  # scheduled workflow, wall = timeout-minutes; bot-token note
+    │   └── local-supervisor.sh.tmpl # generic foreground fallback; no daemon install
     └── install.sh                # symlink/copy this folder into ~/.claude ~/.codex ~/.agents skills dirs
 ```
 
@@ -68,7 +69,7 @@ Each is an ADR; cite it in the relevant reference file so the contract is tracea
 6. **V1 capture + human-gated tiny-PR suggestion (ADR-0006).** Loops append structured evidence in the V2 schema to `.agent-loops/evidence/inbox/`. At threshold (default 3, same theme+scope) the Reviewer tick opens a **tiny PR** against the playbook proposing the addition. NO maintainer, NO consolidation, NO auto-apply. `evidence-capture.md`. `config.yaml` carries the dormant V2 keys.
 7. **Budget enforcement split (ADR-0007).** State-derived (cycles, changed-files, concurrency) checked by the tick at boundaries; continuous (runtime/cost) enforced by the runner's external wall. Killed tick: release claim, retry ≤2, then `stalled`. `budgets.md` + runner templates carry the `timeout`.
 8. **Claim atomicity via branch-ref push (ADR-0008).** Branch `loop/impl/issue-<id>`; label flip is advisory only; stale reclaim is state-derived from marker ts. `claiming.md`.
-9. **GitHub-only behind named prose adapter seam (ADR-0009).** Define exactly these operations in `adapter-github.md`: `list_ready_work`, `claim_work`, `read_state`, `post_marker`, `read_markers`, `set_label`, `open_change`, `get_head_sha`, `is_trusted_actor`. All other references call operations *by name*, never raw `gh`. The local `mkdir`/markdown-queue fallback is "another implementation of the same contract," noted but not built out in V1.
+9. **GitHub-only behind named prose adapter seam (ADR-0009).** Define exactly these operations in `adapter-github.md`: `list_ready_work`, `claim_work`, `read_state`, `post_marker`, `read_markers`, `set_label`, `open_change`, `get_head_sha`, `is_trusted_actor`. Tick playbooks call operations *by name*, never raw `gh`; bootstrap may still print concrete `gh auth` and label setup commands because setup is operator-facing. The local `mkdir`/markdown-queue fallback is "another implementation of the same contract," noted but not built out in V1.
 10. **Adversarial, proof-anchored review; opt-in cross-model (ADR-0010).** Reviewer playbook forces disconfirmation and anchors to proof output. `config.yaml` has `reviewer_model:` override (default empty = same model). `loop-reviewer.md`.
 
 ## 4. `config.yaml` (target repo) — required keys
@@ -93,13 +94,13 @@ budgets:
 
 - [ ] `SKILL.md` exists, has valid frontmatter, is <100 lines, routes by mode.
 - [ ] `description` has a "Use when" clause and concrete triggers.
-- [ ] All 11 reference files and all assets in §1 exist and are non-empty.
+- [ ] All 11 reference files and all V1 assets in §1 exist and are non-empty.
 - [ ] Every one of the 10 ADRs is cited in at least one reference file.
 - [ ] The 8 adapter operations are each defined with a concrete `gh`/git recipe.
-- [ ] No reference outside `adapter-github.md` calls `gh` directly (grep to confirm).
+- [ ] No tick playbook bypasses `adapter-github.md` with raw `gh`; bootstrap setup may include `gh auth` and label creation commands for the operator.
 - [ ] Marker grammar is versioned (`v=1`) and parseable.
 - [ ] `config.yaml` has all V1-active keys AND the dormant `# v2` keys.
-- [ ] Runner templates contain an external `timeout`/`timeout-minutes` wall.
+- [ ] Guarded/local runner templates contain an external wall; `/loop` and Codex Automation profiles document any weaker surface guarantee.
 - [ ] No V2 machinery built (no maintainer/consolidation/loopctl/non-GitHub adapter) — grep to confirm absence.
 - [ ] `install.sh` targets all three skill dirs (`.claude`, `.codex`, `.agents`).
 - [ ] A "dry-run walkthrough" section in SKILL.md or bootstrap.md traces: one `ready` issue → claim → implement → prove → PR → review → fix → converge, naming the state transitions.
