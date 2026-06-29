@@ -580,7 +580,7 @@ fixer() {
     prior_verdict="$(gh pr view "$pr" --repo "$repo_slug" --json comments --jq '.comments[].body' \
       | sed -n "s/.*loop:fixer.*reviewed_sha=${head}.*verdict=\\([^ ]*\\).*/\\1/p" \
       | tail -1)"
-    if [ -n "$prior_verdict" ]; then
+    if [ "$prior_verdict" = "fixed" ] || [ "$prior_verdict" = "unproven" ] || [ "$prior_verdict" = "did-not-converge" ] || [ "$prior_verdict" = "stalled" ]; then
       echo "fixer no-op: PR #${pr} head ${head} already fixed with verdict=${prior_verdict}"
       return 0
     fi
@@ -644,6 +644,7 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
         set_pr_state "$pr" "$repo_slug" "$label_did_not_converge"
         [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_did_not_converge"
       else
+        cycle=$((cycle + 1))
         post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=proof-failed cycle=${cycle} ts=$(ts) -->" "Guarded fixer ran proof and it still failed; see ${proof_log}.\n${body_tail}"
         set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
         [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
