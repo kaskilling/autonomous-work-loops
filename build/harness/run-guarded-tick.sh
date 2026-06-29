@@ -330,9 +330,9 @@ VERDICT: blocking
 After that, provide concise findings. Use blocking only for defects that should route to fixer."
   set +e
   if [ -n "$model" ]; then
-    wall codex exec --cd "$repo" -s read-only -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" >"$review_log" 2>&1
+    wall codex exec --cd "$repo" -s read-only -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$review_log" 2>&1
   else
-    wall codex exec --cd "$repo" -s read-only -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" >"$review_log" 2>&1
+    wall codex exec --cd "$repo" -s read-only -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" </dev/null >"$review_log" 2>&1
   fi
   local rc=$?
   if [ "$rc" -ne 0 ]; then
@@ -421,9 +421,9 @@ ${body}
     Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Do not edit .agent-loops unless the issue explicitly requires it. Implement the smallest complete change and exit."
     set +e
     if [ -n "$model" ]; then
-      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" >"$log" 2>&1
+      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$log" 2>&1
     else
-      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" >"$log" 2>&1
+      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" </dev/null >"$log" 2>&1
     fi
     local codex_rc=$?
     set -e
@@ -596,9 +596,9 @@ ${feedback}
 Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Fix the blocking defects needed for this cycle and exit."
     set +e
     if [ -n "$model" ]; then
-      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" >"$log" 2>&1
+      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$log" 2>&1
     else
-      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" >"$log" 2>&1
+      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" </dev/null >"$log" 2>&1
     fi
     local codex_rc=$?
     set -e
