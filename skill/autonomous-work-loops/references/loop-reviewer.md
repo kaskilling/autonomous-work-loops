@@ -10,13 +10,13 @@ Assume defects exist. Try to disconfirm the Implementer's claims. Inspect the ac
 
 ## Steps
 
-1. Read `.agent-loops/config.yaml`, especially `proof`, `reviewer_model`, labels, and budgets.
+1. Read `.agent-loops/config.yaml` and `.agent-loops/context.md`, especially `proof`, `reviewer_model`, labels, budgets, generated paths, and repo instruction files.
 2. Call `read_state`, `get_head_sha`, and `read_markers` for candidate PRs.
 3. If the latest reviewer marker has this head SHA, no-op and exit.
 4. If proof commands are absent, call `post_marker` with `verdict=unproven`, call `set_label` to `unproven` (its own terminal label, NOT `ready-for-human`), and exit. No-proof repos never auto-converge. This preserves the invariant that the `ready-for-human` label alone means "proven and converged."
 5. Enforce changed-file and reviewer concurrency budgets at tick boundary.
 6. Re-run or inspect proof. Passing proof is required but not sufficient.
-7. Inspect the diff for correctness, tests, security impact, path-scoped human gates, and whether the issue was actually solved.
+7. Inspect the diff for correctness, tests, security impact, path-scoped human gates, generated files that should not be in the PR, and whether the issue was actually solved.
 8. If proof fails or blocking defects exist, call `post_marker` with `verdict=needs-fix`, increment or preserve the cycle as described in `convergence.md`, call `set_label` to `needs-fix`, append evidence, and exit.
 9. If only non-blocking defects remain at the cycle cap, call `post_marker` with `verdict=ready-for-human`, list remaining items, call `set_label` to `ready-for-human`, and exit.
 10. If blocking defects remain at the cycle cap, call `post_marker` with `verdict=did-not-converge`, call `set_label` to `did-not-converge` (its own terminal label, NOT `ready-for-human`), list the blocking items, route to human, and exit.

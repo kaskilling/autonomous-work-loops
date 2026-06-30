@@ -4,7 +4,7 @@ Use the installed `autonomous-work-loops` skill in tick mode with role `implemen
 
 Default path:
 
-1. Read `.agent-loops/config.yaml`.
+1. Read `.agent-loops/config.yaml` and `.agent-loops/context.md`.
 2. Use `claim_work` for one trusted ready issue.
 3. Implement one coherent change.
 4. Run configured proof.

@@ -18,7 +18,7 @@ Bootstrap mode sets up `.agent-loops/` in the target repository and exits. It di
    - `strict` for public or multi-contributor repos.
 6. Build `trusted_actors` from the authenticated GitHub login, explicit maintainers, owners, or named loop dispatchers. Add the authenticated login when `gh api user --jq .login` succeeds and the user is the repo owner, has maintainer/admin/write permission, or is the person explicitly setting up the loop. Do not add every collaborator by default. Leave the list editable. If the authenticated login cannot be proven, stop and ask the user to run `gh auth login`.
 7. Choose one V1 runner surface: Codex Automations when running in Codex, Claude `/loop` when running in Claude Code, or the local foreground supervisor when no native recurring runner is available. Render from `assets/runners/`: `codex.sh.tmpl` for guarded Codex ticks, `codex-automation.md.tmpl` for Codex automation prompts, `loop.md.tmpl` for Claude Code `/loop`, and `local-supervisor.sh.tmpl` for the foreground fallback. The Codex runner is guarded: the parent shell owns trust, claim, Git mutation, proof, PRs, labels, and markers; nested Codex edits the working tree only. This avoids managed-sandbox `.git` write denial while keeping the branch-ref claim deterministic. Headless agents load the skill by PROMPT, not by `--skill/--role` flags. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications. Do not install system cron or GitHub Actions schedules during V1 bootstrap.
-8. Render `.agent-loops/config.yaml`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
+8. Render `.agent-loops/config.yaml`, `.agent-loops/context.md`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
 
 ## Required Labels
 
@@ -40,7 +40,7 @@ Do not treat missing labels as a background concern. Without these labels, the s
 
 Copy the template tree from `assets/agent-loops-template/` into the target repo as `.agent-loops/`. Then fill placeholders with discovered repo facts and user-approved defaults. Copy the selected runner template from `assets/runners/` into the location the target repo expects.
 
-Bootstrap may edit target-repo files, but it must keep `.agent-loops/config.yaml` as the durable contract future ticks read. Future ticks reconstruct all state from `.agent-loops/` and host state.
+Bootstrap may edit target-repo files, but it must keep `.agent-loops/config.yaml` and `.agent-loops/context.md` as the durable contracts future ticks read. Future ticks reconstruct all state from `.agent-loops/` and host state.
 
 ## Critical Decisions
 
@@ -48,6 +48,7 @@ Write a Bootstrap Report in the target repo or in the conversation. Include:
 
 - `trust_posture`, why it was inferred, and the editable `trusted_actors` list. In strict mode, only issues authored by these actors are executable; external work needs a trusted-authored dispatch issue.
 - Proof commands found or missing. Missing proof is a human gate and prevents autonomous convergence.
+- Context contract. Include the repo instruction files discovered (`AGENTS.md`, `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, path-local docs), generated paths, and any repo-specific rules that role ticks must read before editing or reviewing.
 - Runner surface and credential boundary. Codex Automations, Claude `/loop`, and local foreground supervisor are the V1 runner choices. Manual guarded ticks are for debugging. Hosted CI/bot runners require a scoped bot token and are outside the V1 default.
 - Budget defaults and any requested changes. Budget increases require human approval.
 - Reviewer model. Empty `reviewer_model` means same-model adversarial review; a configured override is the recommended quality upgrade.
@@ -75,6 +76,10 @@ Write a Bootstrap Report in the target repo or in the conversation. Include:
   - test:
   - build:
   - lint:
+- Context:
+  - repo instructions:
+  - generated paths:
+  - repo-specific rules:
 - Runner:
 - Credentials:
 - Budgets:

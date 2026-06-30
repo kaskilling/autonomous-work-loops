@@ -68,8 +68,9 @@ with ALL of these invariants holding (each is grep-checkable from issue/PR marke
 | A6 | `ready-for-human` label appears ONLY on proven+converged PRs; `unproven`/`did-not-converge` use their own labels | 0005/0010 |
 | A7 | No tick exceeded the runtime wall (`timeout`/`gtimeout` or host wall enforced) | 0007 |
 | A8 | Markers are versioned (`v=1`) and parseable | 0002 |
+| A9 | Every nested Implementer/Reviewer/Fixer prompt starts from repo root with bounded context: `.agent-loops/config.yaml`, `.agent-loops/context.md`, issue/PR state, proof logs, diffs, and relevant repo docs only | context contract |
 
-A run **FAILS** (and we learn from it) if: duplicate work appears (A2), a PR converges without proof (A3/A6), a reviewer misses a planted blocking defect, it loops past the cycle cap instead of escalating (0003), or a tick re-does work on an unchanged head (A5).
+A run **FAILS** (and we learn from it) if: duplicate work appears (A2), a PR converges without proof (A3/A6), a reviewer misses a planted blocking defect, it loops past the cycle cap instead of escalating (0003), a tick re-does work on an unchanged head (A5), or nested agents act without the context contract (A9).
 
 ## V1 runner-surface validation
 
@@ -82,6 +83,16 @@ Run these before claiming V1 product GO:
 | Local foreground supervisor | `bash -n` passes; foreground run cycles roles without manual ticks; one `ready` issue reaches terminal state; `Ctrl-C` stops it; restart no-ops on already-terminal work. |
 
 At least one product-native surface must pass for a limited V1 GO. All three should pass before broad public launch.
+
+## Context validation
+
+Before rerunning GO validation, confirm bootstrap renders `.agent-loops/context.md` and that guarded runner logs include role prompts with:
+
+- repository root and runner working directory
+- `.agent-loops/context.md` content, capped to the first 220 lines
+- root instruction files present, such as `AGENTS.md`, `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, and `.github/copilot-instructions.md`
+- explicit guidance to use targeted reads/`rg`, not broad directory dumps
+- explicit prohibition on editing `.agent-loops/` unless the issue requires it
 
 ## Eval matrix — which setup works best
 
@@ -114,7 +125,7 @@ If you approve, Phase 1 seeds #1 and #3 (one feature + one bugfix = exercises re
 
 ## Definition of done for the whole test
 
-- At least one issue converged to `ready-for-human` with all A1–A8 holding, evidenced by the captured timeline.
+- At least one issue converged to `ready-for-human` with all A1–A9 holding, evidenced by the captured timeline.
 - The eval matrix is filled with real numbers and a "best setup" recommendation.
 - Any invariant failures are documented with root cause (skill bug vs. codex behavior vs. environment).
 - DX walkthrough written from the actual observed experience.

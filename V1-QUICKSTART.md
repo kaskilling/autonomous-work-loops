@@ -62,6 +62,8 @@ Bootstrap should render `.agent-loops/`, write a Bootstrap Report, identify the 
 
 Review the Bootstrap Report before arming a runner. In strict mode, the issue author must be listed in `.agent-loops/config.yaml` under `trusted_actors`; the bootstrap default should include the authenticated maintainer/operator, not every collaborator.
 
+Also review `.agent-loops/context.md`. It is the small context contract every Implementer, Reviewer, and Fixer tick reads before acting. Add repo-specific rules there when they matter, but keep it short and point to existing docs instead of pasting large code or directory listings.
+
 ## Runner Surface 1: Local Foreground Supervisor
 
 Use this for the current V1 trial path.
@@ -141,6 +143,7 @@ gh label create stalled --color 000000 --description "Runner exceeded retry or r
 6. Let the armed runner surface work.
 7. Confirm exactly one `loop/impl/issue-<n>` branch and one PR.
 8. Confirm the PR has proof markers and reaches `ready-for-human`, or one of the human-gated terminal labels.
+9. Confirm no generated `.agent-loops/evidence/` logs appear in the implementation PR diff.
 
 ## V1 Non-Goals
 

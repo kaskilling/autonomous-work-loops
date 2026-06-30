@@ -420,6 +420,23 @@ Evidence:
 - Branch snapshot: `/tmp/awl-v1-validation-368eae8/v1-local-supervisor/snapshots/branch-after-stop.txt`
 - PR marker baseline/restart diff inputs: `/tmp/awl-v1-validation-368eae8/v1-local-supervisor/snapshots/pr-markers-before-restart.txt`, `/tmp/awl-v1-validation-368eae8/v1-local-supervisor/snapshots/pr-markers-after-restart.txt`
 
+### Context Contract Hardening
+
+Verdict: STATIC PASS; needs live rerun
+
+Observed:
+- Added `.agent-loops/context.md` to the bootstrap template.
+- Bootstrap docs now make `.agent-loops/config.yaml` and `.agent-loops/context.md` the durable contracts future ticks read.
+- Role references and generated playbooks now require Implementer, Reviewer, and Fixer to read `.agent-loops/context.md`.
+- Guarded runner prompts now include a bounded context pack with repository root, runner working directory, local default branch, `.agent-loops/context.md` content capped to 220 lines, and root instruction files present.
+- Implementer and Fixer prompts tell nested agents to use targeted file reads or `rg` from repo root and to avoid broad directory dumps.
+- Reviewer prompt receives the same context pack plus issue context, proof log, and diff.
+- Generated `.agent-loops/evidence/` remains excluded from implementation commits.
+
+Required before GO:
+- Rerun the local foreground supervisor fixture and assert the nested role logs include the context pack.
+- Confirm no implementation PR includes generated evidence logs.
+
 ### Codex Automations
 
 Verdict: NO-GO for broad V1 launch

@@ -6,10 +6,10 @@ Goal: address one Reviewer feedback set on the current PR head, rerun proof, pos
 
 ## Steps
 
-1. Read `.agent-loops/config.yaml`, then call `read_state`, `get_head_sha`, and `read_markers` for PRs labeled `needs-fix`.
+1. Read `.agent-loops/config.yaml` and `.agent-loops/context.md`, then call `read_state`, `get_head_sha`, and `read_markers` for PRs labeled `needs-fix`.
 2. If the latest fixer marker has this head SHA and there are no newer reviewer defects, no-op and exit.
 3. Enforce fixer concurrency, changed-file, and cycle budgets.
-4. Read the latest reviewer marker and human-visible feedback. Classify blocking and non-blocking items.
+4. Read the latest reviewer marker, human-visible feedback, and repo instruction files relevant to the affected paths. Classify blocking and non-blocking items.
 5. Fix only the blocking items needed for the current cycle unless non-blocking cleanup is tiny and directly adjacent.
 6. Run configured proof commands. If proof is absent, route to `unproven`; do not send the PR back into autonomous convergence.
 7. If proof passes, call `post_marker` with `verdict=fixed`, the current head SHA, and the cycle number, then call `set_label` back to `in-progress` for reviewer pickup.

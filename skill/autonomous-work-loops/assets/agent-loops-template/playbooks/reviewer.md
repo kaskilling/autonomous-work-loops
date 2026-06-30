@@ -4,7 +4,7 @@ Use the installed `autonomous-work-loops` skill in tick mode with role `reviewer
 
 Default path:
 
-1. Read current host state and markers.
+1. Read `.agent-loops/config.yaml`, `.agent-loops/context.md`, current host state, and markers.
 2. No-op if this head was already reviewed.
 3. Anchor review to proof, changed files, and diff facts.
 4. Send blocking defects to `needs-fix`.

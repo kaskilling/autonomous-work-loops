@@ -317,6 +317,33 @@ claim_review_lock() {
   git push origin "${head}:${lock_ref}" >/dev/null 2>&1
 }
 
+context_pack() {
+  local root default f found
+  root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  default="$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)"
+  [ -n "$default" ] || default="$(git branch --show-current 2>/dev/null || true)"
+  {
+    printf 'Repository root: %s\n' "$root"
+    printf 'Runner working directory: %s\n' "$PWD"
+    printf 'Default branch: %s\n' "$default"
+    printf '\n.agent-loops/context.md:\n'
+    if [ -f ".agent-loops/context.md" ]; then
+      sed -n '1,220p' .agent-loops/context.md
+    else
+      printf 'Missing .agent-loops/context.md. Use .agent-loops/config.yaml, host state, and nearby repo docs only.\n'
+    fi
+    printf '\nRepo instruction files present:\n'
+    found=0
+    for f in AGENTS.md CLAUDE.md README.md CONTRIBUTING.md docs/CONTRIBUTING.md .github/copilot-instructions.md; do
+      if [ -f "$f" ]; then
+        printf '%s\n' "- $f"
+        found=1
+      fi
+    done
+    [ "$found" = 1 ] || printf '%s\n' "- none found at repo root"
+  }
+}
+
 run_nested_review() {
   local pr="$1" repo_slug="$2" head="$3" proof_log="$4" review_log="$5" proof_rc="$6" issue body diff prompt verdict
   issue="$(pr_issue_number "$pr" "$repo_slug" "")"
@@ -337,6 +364,9 @@ Diff:
 ${diff}
 
 Review adversarially. Do not run git. Do not run gh. Do not edit files. Decide whether the current head has blocking defects relative to the issue and proof.
+
+Repository context:
+$(context_pack)
 
 Return exactly one first line:
 VERDICT: clean
@@ -430,11 +460,16 @@ Stale in-progress claim detected with no claim branch. Releasing the advisory la
     log="$raw/logs/guarded-implementer-$(date -u +%Y%m%d-%H%M%S)-issue-${issue}.log"
     local prompt="You are implementing already-claimed GitHub issue #${issue} on branch ${branch}.
 
+Repository context:
+$(context_pack)
+
 Issue title: ${title}
 Issue body:
 ${body}
 
-    Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Do not edit .agent-loops unless the issue explicitly requires it. Implement the smallest complete change and exit."
+Before editing, use targeted file reads or rg from the repository root to inspect the relevant source, tests, and repo instruction files listed above. Do not load unrelated large directory trees.
+
+Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Do not edit .agent-loops unless the issue explicitly requires it. Implement the smallest complete change and exit."
     set +e
     if [ -n "$model" ]; then
       wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$log" 2>&1
@@ -607,11 +642,16 @@ fixer() {
     log="$raw/logs/guarded-fixer-$(date -u +%Y%m%d-%H%M%S)-pr-${pr}.log"
     prompt="You are fixing PR #${pr} on branch ${branch}.
 
+Repository context:
+$(context_pack)
+
 Issue context:
 ${body}
 
 Latest review/proof feedback:
 ${feedback}
+
+Before editing, use targeted file reads or rg from the repository root to inspect the relevant source, tests, and repo instruction files listed above. Do not load unrelated large directory trees.
 
 Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Fix the blocking defects needed for this cycle and exit."
     set +e

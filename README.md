@@ -51,6 +51,7 @@ For step-by-step setup and first-trial instructions, see [V1-QUICKSTART.md](V1-Q
 
 - **Trust-gated intake**: only trusted actors' `ready` issues should be picked up (posture inferred from repo visibility; editable `trusted_actors`). In strict mode, the issue author must be in `trusted_actors`; external requests need a trusted maintainer to create a dispatch issue and label that issue `ready`. Current status: strict untrusted-author rejection and allowlisted dispatch acceptance both pass; the guarded Codex runner keeps Git mutation outside nested Codex so `.git` sandbox protection no longer blocks claim.
 - **Proof is a precondition**: no test/build/lint command → work is labeled `unproven` and handed to a human; it never auto-converges.
+- **Bounded context**: every tick starts from repo root, reads `.agent-loops/config.yaml` plus `.agent-loops/context.md`, then inspects only the issue/PR, proof logs, diffs, and relevant repo docs.
 - **Human gates**: merge, deploy, secrets, protected paths, budget increases, and playbook changes always stop for a human.
 - **Cost walls**: every tick runs under an external `timeout`; runaway cycles cap out and escalate.
 
