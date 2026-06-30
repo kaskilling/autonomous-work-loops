@@ -345,7 +345,7 @@ context_pack() {
 }
 
 run_nested_review() {
-  local pr="$1" repo_slug="$2" head="$3" proof_log="$4" review_log="$5" proof_rc="$6" issue body diff prompt verdict
+  local pr="$1" repo_slug="$2" head="$3" proof_log="$4" review_log="$5" proof_rc="$6" issue body diff prompt prompt_log verdict
   issue="$(pr_issue_number "$pr" "$repo_slug" "")"
   body=""
   if [ -n "$issue" ]; then
@@ -374,6 +374,8 @@ or
 VERDICT: blocking
 
 After that, provide concise findings. Use blocking only for defects that should route to fixer."
+  prompt_log="${review_log%.log}-prompt.log"
+  printf '%s\n' "$prompt" >"$prompt_log"
   set +e
   if [ -n "$model" ]; then
     wall codex exec --cd "$repo" -s read-only -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$review_log" 2>&1
@@ -393,7 +395,7 @@ After that, provide concise findings. Use blocking only for defects that should 
 }
 
 implementer() {
-  local repo_slug issue actor branch base title body claim_sha proof_log pr_body pr head_sha proof_rc log timeout_count existing_pr
+  local repo_slug issue actor branch base title body claim_sha proof_log pr_body pr head_sha proof_rc log prompt_log timeout_count existing_pr
   repo_slug="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 
   local active_block=0
@@ -470,6 +472,8 @@ ${body}
 Before editing, use targeted file reads or rg from the repository root to inspect the relevant source, tests, and repo instruction files listed above. Do not load unrelated large directory trees.
 
 Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Do not edit .agent-loops unless the issue explicitly requires it. Implement the smallest complete change and exit."
+    prompt_log="${log%.log}-prompt.log"
+    printf '%s\n' "$prompt" >"$prompt_log"
     set +e
     if [ -n "$model" ]; then
       wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$log" 2>&1
@@ -515,13 +519,13 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     rm -f "$pr_body"
 
     if [ "$proof_rc" = 0 ]; then
-      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-passed cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}. Proof passed; see ${proof_log}."
+      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-passed cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}. Prompt: ${prompt_log}. Proof passed; see ${proof_log}."
     elif [ "$proof_rc" = 2 ]; then
-      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=unproven cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but no proof command is configured."
+      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=unproven cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but no proof command is configured. Prompt: ${prompt_log}."
       set_issue_state "$issue" "$repo_slug" "$label_unproven"
       set_pr_state "$pr" "$repo_slug" "$label_unproven"
     else
-      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-failed cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but proof failed; see ${proof_log}."
+      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-failed cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but proof failed. Prompt: ${prompt_log}. Proof: ${proof_log}."
       set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
       set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
     fi
@@ -566,25 +570,25 @@ reviewer() {
       set -e
       issue="$(pr_issue_number "$pr" "$repo_slug" "$branch")"
       if [ "$review_rc" = 0 ]; then
-        post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=ready-for-human cycle=${cycle} ts=$(ts) -->" "Guarded reviewer reran proof and adversarial review found no blocking defects. Proof: ${proof_log}. Review: ${review_log}."
+        post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=ready-for-human cycle=${cycle} ts=$(ts) -->" "Guarded reviewer reran proof and adversarial review found no blocking defects. Prompt: ${review_log%.log}-prompt.log. Proof: ${proof_log}. Review: ${review_log}."
         set_pr_state "$pr" "$repo_slug" "$label_ready_for_human"
         [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_ready_for_human"
       elif [ "$review_rc" = 10 ]; then
         body_tail="$(tail -40 "$review_log" | sed 's/^/- /')"
         if [ "$cycle" -ge "$max_cycles" ]; then
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=did-not-converge cycle=${cycle} ts=$(ts) -->" "Blocking defects remain at the cycle cap. Review: ${review_log}.\n${body_tail}"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=did-not-converge cycle=${cycle} ts=$(ts) -->" "Blocking defects remain at the cycle cap. Prompt: ${review_log%.log}-prompt.log. Review: ${review_log}.\n${body_tail}"
           set_pr_state "$pr" "$repo_slug" "$label_did_not_converge"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_did_not_converge"
         else
           cycle=$((cycle + 1))
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Guarded reviewer found blocking defects. Proof: ${proof_log}. Review: ${review_log}.\n${body_tail}"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Guarded reviewer found blocking defects. Prompt: ${review_log%.log}-prompt.log. Proof: ${proof_log}. Review: ${review_log}.\n${body_tail}"
           set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
         fi
       else
         body_tail="$(tail -40 "$review_log" | sed 's/^/- /')"
         cycle=$((cycle + 1))
-        post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Guarded reviewer could not parse a clean review verdict, so it is routing to fixer instead of approving. Review: ${review_log}.\n${body_tail}"
+        post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Guarded reviewer could not parse a clean review verdict, so it is routing to fixer instead of approving. Prompt: ${review_log%.log}-prompt.log. Review: ${review_log}.\n${body_tail}"
         set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
         [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
       fi
@@ -654,6 +658,8 @@ ${feedback}
 Before editing, use targeted file reads or rg from the repository root to inspect the relevant source, tests, and repo instruction files listed above. Do not load unrelated large directory trees.
 
 Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Fix the blocking defects needed for this cycle and exit."
+    prompt_log="${log%.log}-prompt.log"
+    printf '%s\n' "$prompt" >"$prompt_log"
     set +e
     if [ -n "$model" ]; then
       wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$log" 2>&1
@@ -682,7 +688,7 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     fi
 
     if [ "$proof_rc" = 0 ]; then
-      post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=fixed cycle=${cycle} ts=$(ts) -->" "Guarded fixer addressed PR #${pr}; proof passed. Fix log: ${log}. Proof: ${proof_log}."
+      post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=fixed cycle=${cycle} ts=$(ts) -->" "Guarded fixer addressed PR #${pr}; proof passed. Prompt: ${prompt_log}. Fix log: ${log}. Proof: ${proof_log}."
       set_pr_state "$pr" "$repo_slug" "$label_in_progress"
       [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_in_progress"
     elif [ "$proof_rc" = 2 ]; then

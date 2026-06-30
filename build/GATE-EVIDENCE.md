@@ -422,7 +422,7 @@ Evidence:
 
 ### Context Contract Hardening
 
-Verdict: STATIC PASS; needs live rerun
+Verdict: PASS
 
 Observed:
 - Added `.agent-loops/context.md` to the bootstrap template.
@@ -431,11 +431,25 @@ Observed:
 - Guarded runner prompts now include a bounded context pack with repository root, runner working directory, local default branch, `.agent-loops/context.md` content capped to 220 lines, and root instruction files present.
 - Implementer and Fixer prompts tell nested agents to use targeted file reads or `rg` from repo root and to avoid broad directory dumps.
 - Reviewer prompt receives the same context pack plus issue context, proof log, and diff.
+- Guarded runner now writes `*-prompt.log` next to each nested role log before invoking Codex, so audits can prove the exact role context.
 - Generated `.agent-loops/evidence/` remains excluded from implementation commits.
+- Live fixture repo: `Mohamad-Kamar/awl-v1-context-contract-20260630072520`.
+- Local clone: `/tmp/awl-v1-context-contract-20260630072520`.
+- Evidence: `/tmp/awl-v1-validation-89ea357/context-contract/`.
+- Issue `#1` reached `ready-for-human`.
+- PR `#2` reached `ready-for-human` at head `ecbff803be767bbdf4c2dec7ab72c4f536521f11`.
+- Exactly one loop branch exists: `refs/heads/loop/impl/issue-1`.
+- Exactly one PR exists.
+- PR comments contain the expected two markers: implementer `proof-passed` and reviewer `ready-for-human`.
+- PR files are only `mathbox.py` and `tests/test_mathbox.py`; no generated evidence logs were included.
+- Bounded restart no-opped: `no trusted ready work`, `no reviewable loop PR`, `no fixable loop PR`.
 
-Required before GO:
-- Rerun the local foreground supervisor fixture and assert the nested role logs include the context pack.
-- Confirm no implementation PR includes generated evidence logs.
+Evidence:
+- Implementer prompt snapshot: `/tmp/awl-v1-validation-89ea357/context-contract/logs/guarded-implementer-20260630-072834-issue-1-prompt.log`.
+- Reviewer prompt snapshot: `/tmp/awl-v1-validation-89ea357/context-contract/logs/guarded-review-20260630-072947-pr-2-prompt.log`.
+- Implementer proof: `/tmp/awl-v1-validation-89ea357/context-contract/logs/guarded-proof-20260630-072931-issue-1.log`.
+- Reviewer proof: `/tmp/awl-v1-validation-89ea357/context-contract/logs/guarded-review-proof-20260630-072946-pr-2.log`.
+- Reviewer log: `/tmp/awl-v1-validation-89ea357/context-contract/logs/guarded-review-20260630-072947-pr-2.log`.
 
 ### Codex Automations
 

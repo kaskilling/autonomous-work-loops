@@ -68,7 +68,7 @@ with ALL of these invariants holding (each is grep-checkable from issue/PR marke
 | A6 | `ready-for-human` label appears ONLY on proven+converged PRs; `unproven`/`did-not-converge` use their own labels | 0005/0010 |
 | A7 | No tick exceeded the runtime wall (`timeout`/`gtimeout` or host wall enforced) | 0007 |
 | A8 | Markers are versioned (`v=1`) and parseable | 0002 |
-| A9 | Every nested Implementer/Reviewer/Fixer prompt starts from repo root with bounded context: `.agent-loops/config.yaml`, `.agent-loops/context.md`, issue/PR state, proof logs, diffs, and relevant repo docs only | context contract |
+| A9 | Every nested Implementer/Reviewer/Fixer prompt starts from repo root with bounded context: `.agent-loops/config.yaml`, `.agent-loops/context.md`, issue/PR state, proof logs, diffs, and relevant repo docs only; persisted `*-prompt.log` snapshots prove the delivered context | context contract |
 
 A run **FAILS** (and we learn from it) if: duplicate work appears (A2), a PR converges without proof (A3/A6), a reviewer misses a planted blocking defect, it loops past the cycle cap instead of escalating (0003), a tick re-does work on an unchanged head (A5), or nested agents act without the context contract (A9).
 
