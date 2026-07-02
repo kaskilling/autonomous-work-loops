@@ -9,7 +9,8 @@ V1 turns GitHub issues labeled `ready` into proven PRs by arming one runner surf
 3. Confirm the Bootstrap Report: proof command, trusted actors, labels, and runner surface.
 4. Arm the tested runner surface:
    - Local foreground supervisor.
-   - Codex Automations and Claude `/loop` are target profiles, but they are not V1 GO until their live permission/concurrency blockers are fixed.
+   - Claude `/loop`.
+   - Codex Automations are documented below, but they are not V1 GO in the current validation environment.
 5. Create or rewrite a trusted issue and apply `ready`.
 6. Watch GitHub labels and PR markers:
    - clean path: `ready -> in-progress -> ready-for-human`
@@ -78,7 +79,7 @@ Start it in one terminal and leave it running. Stop it with `Ctrl-C`. It does no
 
 ## Runner Surface 2: Codex Automations
 
-Status: target profile, not broad-launch GO.
+Status: NO-GO in the current validation environment.
 
 Use this when running from Codex.
 
@@ -91,11 +92,13 @@ Expected bootstrap output:
   - reviewer
   - fixer
 
-The automation prompt should run one guarded role tick and exit. It must not install cron jobs or create more automations. Live validation showed broad "load the skill" prompts are too loose; use a command-only prompt and validate the Codex permission profile before relying on this unattended.
+The automation prompt should run one guarded role tick and exit. It must not install cron jobs or create more automations. Use a command-only prompt; broad "load the skill" prompts are too loose for unattended scheduling.
+
+Current blocker: the Codex app automation runtime fired the guarded command but could not resolve/reach `api.github.com`, even with a local environment config path. Do not treat this surface as V1 GO until a clean fixture reaches `ready-for-human`.
 
 ## Runner Surface 3: Claude `/loop`
 
-Status: target profile, not broad-launch GO.
+Status: Limited V1 GO with the guarded Claude runner.
 
 Use this when running from Claude Code.
 
@@ -105,10 +108,17 @@ Expected bootstrap output:
   - implementer
   - reviewer
   - fixer
+- `.agent-loops/runners/claude.sh`
 
-Each loop prompt must load the skill, run exactly one role tick, reconstruct host state, do one unit of work, and exit.
+Start Claude Code from the target repo with a permission mode that allows the guarded runner command to execute unattended:
 
-Live validation showed Claude Code can create the scheduled `/loop`, but a fresh fixture blocked on skill/reference file permissions before the guarded tick. Validate the Claude permission setup before relying on this unattended.
+```sh
+claude --permission-mode bypassPermissions --add-dir "$PWD"
+```
+
+Each loop prompt must run exactly one guarded `claude.sh` role tick and exit. It must not load the skill directly on wake; the guarded runner carries the bounded context pack and owns Git/GitHub mutation.
+
+Live validation fixture `awl-v1-claude-loop-final2-20260702074653` reached `ready-for-human`, later scheduled wakes no-opped, and the disposable scheduled tasks were cleared after validation.
 
 ## Manual Debug Commands
 
@@ -118,6 +128,10 @@ Manual ticks are for troubleshooting, not the happy path:
 .agent-loops/runners/codex.sh "$PWD" implementer
 .agent-loops/runners/codex.sh "$PWD" reviewer
 .agent-loops/runners/codex.sh "$PWD" fixer
+
+.agent-loops/runners/claude.sh "$PWD" implementer
+.agent-loops/runners/claude.sh "$PWD" reviewer
+.agent-loops/runners/claude.sh "$PWD" fixer
 ```
 
 ## First Manual Trial

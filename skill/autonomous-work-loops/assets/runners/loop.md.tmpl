@@ -1,20 +1,29 @@
 # /loop runner template (Claude Code)
 
-`/loop` re-invokes a PROMPT on an interval. Skills load by prompt, not by `--skill/--role` flags.
+`/loop` re-invokes a prompt on an interval. For V1, use `/loop` only as the
+Claude scheduler surface: each wake must run the guarded shell runner once and
+then stop. The guarded runner owns trust, claim, Git writes, proof, PRs, labels,
+markers, and nested Claude edit/review calls.
+
+Start Claude Code from the target repo with permissions that allow this one
+runner command to execute unattended, for example:
+
+```sh
+claude --permission-mode bypassPermissions --add-dir "{{repo_path}}"
+```
+
 Create one `/loop` entry per role:
 
 ```text
-/loop every {{interval}}: Load the autonomous-work-loops skill and run one {{role}} tick in {{repo_path}}, following tick-mode. Reconstruct state from host + .agent-loops/. Do one unit of work and exit.
+/loop every {{interval}}: Run exactly this command once, then stop:
+
+{{repo_path}}/.agent-loops/runners/claude.sh "{{repo_path}}" {{role}}
+
+Do not load the autonomous-work-loops skill directly. Do not reconstruct the workflow yourself. Do not run gh or git directly except through that runner. Do not install cron jobs. Do not create additional scheduled loops. If the command reports no eligible work, report the no-op and stop.
 ```
 
 Roles: `implementer`, `reviewer`, `fixer`.
 
-The external cost wall (ADR-0007): `/loop` does not impose a per-iteration OS timeout, so either
-(a) wrap the underlying agent call in `timeout`/`gtimeout` if your `/loop` shells out, or
-(b) rely on the tick's own state-derived budget checks plus a low `max_runtime_minutes_per_loop`
-that the tick honors and the next iteration enforces. Prefer the guarded `codex.sh`
-runner when a hard OS-level wall is required.
-
-Live validation note: Claude Code created the scheduled `/loop`, but the first wakeup
-blocked on skill-file read permissions in a fresh fixture. Treat this profile as
-needs-live-validation until bootstrap emits the required Claude permission setup.
+The external cost wall (ADR-0007): `/loop` itself does not impose a
+per-iteration OS timeout. The guarded `claude.sh` runner wraps nested Claude
+calls with `timeout`, `gtimeout`, or the shell fallback from the repo config.

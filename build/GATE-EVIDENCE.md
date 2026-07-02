@@ -468,15 +468,20 @@ Observed:
 - Process inspection showed the outer Codex automation agent was reconstructing the workflow and requesting direct `gh` permissions, rather than only running the guarded command.
 - Deleted the three patched-fixture Codex automations after evidence capture.
 - Cleanup: removed active work labels from disposable fixtures; marked blocked Codex fixture issue/PR states `stalled`.
+- Fresh rerun on 2026-07-02 used fixture repo `Mohamad-Kamar/awl-v1-codex-automation-final-20260702073341`, clone `/tmp/awl-v1-codex-automation-final-20260702073341`.
+- Command-only app automations fired the guarded runner, but the app automation runtime failed before host work with `error connecting to api.github.com`.
+- A second implementer automation with `localEnvironmentConfigPath=/Users/mkamar/.codex/config.toml` produced the same DNS/network failure.
+- Final state after cleanup: issue `#1` stayed `ready`, no loop branch, no PR.
+- Deleted all 2026-07-02 Codex test automations after evidence capture.
 
 Required before GO:
-- Bootstrap must emit a Codex Automation permission/profile setup that can run exactly the guarded command without interactive approval.
-- The automation prompt must remain command-only.
-- The reviewer lock and evidence-skip fix must be rerun on a clean fixture to terminal state.
+- Codex app scheduler environment must be able to resolve and reach `api.github.com`.
+- The automation prompt must remain command-only and invoke exactly one guarded runner role.
+- Rerun on a clean fixture to terminal state after the scheduler network profile is fixed.
 
 ### Claude `/loop`
 
-Verdict: NO-GO for broad V1 launch
+Verdict: PASS
 
 Observed:
 - Fixture repo `Mohamad-Kamar/awl-v1-claude-loop`, clone `/tmp/awl-v1-claude-loop`.
@@ -486,8 +491,24 @@ Observed:
 - The guarded runner never executed: fixture issue `#1` stayed `ready`; no `loop/*` branch and no PR existed.
 - Stopped the interactive Claude process after evidence capture; `ps auxww | rg '[c]laude'` showed no remaining Claude process.
 - Cleanup: removed `ready` from the disposable Claude fixture issue.
+- Patched V1 to add a guarded Claude runner: `skill/autonomous-work-loops/assets/runners/claude.sh.tmpl`.
+- Patched `loop.md.tmpl` so `/loop` schedules run exactly one guarded `claude.sh` role command per wake instead of loading skill/reference files directly.
+- First 2026-07-02 rerun exposed a real CLI argument bug: `claude -p --add-dir "$repo" "$prompt"` lets `--add-dir` consume the prompt. Patched the runner to pass `-- "$prompt"`.
+- Fresh passing fixture repo: `Mohamad-Kamar/awl-v1-claude-loop-final2-20260702074653`.
+- Local clone: `/tmp/awl-v1-claude-loop-final2-20260702074653`.
+- Scheduled loop IDs: `724befb5` implementer, `80fc9a73` reviewer, `3b31501b` fixer.
+- Issue `#1` reached `ready-for-human`.
+- PR `#2` reached `ready-for-human` at head `b9374e91284003c53431591ad9c4ffc26f2216de`.
+- Exactly one loop branch exists: `refs/heads/loop/impl/issue-1`.
+- Exactly one PR exists.
+- PR comments contain the expected two markers: implementer `proof-passed` and reviewer `ready-for-human`.
+- PR files are only `mathbox.py` and `tests/test_mathbox.py`; no generated evidence logs were included.
+- Later scheduled wake no-opped: `no trusted ready work`, `no reviewable loop PR`, `no fixable loop PR`.
+- Cleanup: stopped Claude Code and cleared `.claude/scheduled_tasks.json` for the disposable fixture.
 
-Required before GO:
-- Bootstrap must emit the Claude permission setup needed for unattended skill/reference reads and guarded runner execution.
-- The `/loop` prompt should prefer shelling out to the guarded runner when a hard external wall is required.
-- Live validation must prove implementer/reviewer/fixer loops reach a terminal PR state and can be stopped/removed.
+Evidence:
+- Implementer prompt snapshot: `/tmp/awl-v1-claude-loop-final2-20260702074653/.agent-loops/evidence/prove-the-gate/logs/guarded-implementer-20260702-075038-issue-1-prompt.log`.
+- Implementer proof: `/tmp/awl-v1-claude-loop-final2-20260702074653/.agent-loops/evidence/prove-the-gate/logs/guarded-proof-20260702-075104-issue-1.log`.
+- Reviewer prompt snapshot: `/tmp/awl-v1-claude-loop-final2-20260702074653/.agent-loops/evidence/prove-the-gate/logs/guarded-review-20260702-075121-pr-2-prompt.log`.
+- Reviewer proof: `/tmp/awl-v1-claude-loop-final2-20260702074653/.agent-loops/evidence/prove-the-gate/logs/guarded-review-proof-20260702-075120-pr-2.log`.
+- Reviewer log: `/tmp/awl-v1-claude-loop-final2-20260702074653/.agent-loops/evidence/prove-the-gate/logs/guarded-review-20260702-075121-pr-2.log`.

@@ -1,12 +1,12 @@
 # Gate Results
 
-Validation dates: 2026-06-27, retests 2026-06-28, guarded-runner release-blocker validation 2026-06-29, V1 runner-surface validation 2026-06-29
+Validation dates: 2026-06-27, retests 2026-06-28, guarded-runner release-blocker validation 2026-06-29, V1 runner-surface validation 2026-06-29, Claude `/loop` rerun 2026-07-02
 
 ## Smoke Set Verdict
 
-GO/NO-GO: LIMITED V1 GO for local foreground supervisor; NO-GO for broad V1 launch. Live validation on 2026-06-29 found release-blocking issues in Codex Automations and Claude `/loop`. Keep browser/Playwright proof out of scope unless validated on a compatible non-sandboxed runner.
+GO/NO-GO: LIMITED V1 GO for local foreground supervisor and Claude `/loop`; NO-GO for broad V1 launch while Codex Automations remain transport-blocked in the app scheduler. Keep browser/Playwright proof out of scope unless validated on a compatible non-sandboxed runner.
 
-The author-only strict gate now holds in both directions, and the Codex runner has a working guarded path. Untrusted-author intake, direct `claim_work`, and prompt-injection containment all passed on retest. Allowlisted dispatch issue `#9` converged to proven PR `#10` on a Git-capable manual surface. Guarded runner issue `#11` converged to proven PR `#12` by keeping Git/GitHub mutation in the parent shell and nested Codex limited to workspace edits. The widened guarded-runner pass covers no-proof routing, ready-for-human proof honesty, idempotent reviewer re-ticks, duplicate claim race behavior, stale-claim recovery, cost-wall recovery to `stalled`, cycle-cap escalation to `did-not-converge`, cron-equivalent cadence, and planted-defect review routing. The V1 local foreground supervisor path now also passes a fresh live fixture run: one trusted `ready` issue reached a proven `ready-for-human` PR, later supervisor ticks no-opped, restart no-opped, and duplicate branch/PR/marker checks passed.
+The author-only strict gate now holds in both directions, and the guarded runners have working GitHub paths. Untrusted-author intake, direct `claim_work`, and prompt-injection containment all passed on retest. Allowlisted dispatch issue `#9` converged to proven PR `#10` on a Git-capable manual surface. Guarded runner issue `#11` converged to proven PR `#12` by keeping Git/GitHub mutation in the parent shell and nested Codex limited to workspace edits. The widened guarded-runner pass covers no-proof routing, ready-for-human proof honesty, idempotent reviewer re-ticks, duplicate claim race behavior, stale-claim recovery, cost-wall recovery to `stalled`, cycle-cap escalation to `did-not-converge`, cron-equivalent cadence, and planted-defect review routing. The V1 local foreground supervisor path and Claude `/loop` path both pass fresh live fixture runs: one trusted `ready` issue reached a proven `ready-for-human` PR, later scheduled ticks no-opped, and duplicate branch/PR/marker checks passed.
 
 ## Results
 
@@ -42,12 +42,12 @@ The author-only strict gate now holds in both directions, and the Codex runner h
 | V1 local foreground supervisor | runner surface | PASS | `awl-v1-local-supervisor` issue `#1` / PR `#2` reached `ready-for-human`; restart no-opped; one branch, one PR, unchanged markers |
 | V1 context contract | setup/runtime context | PASS | `awl-v1-context-contract-20260630072520` issue `#1` / PR `#2` reached `ready-for-human`; prompt snapshots prove nested Implementer/Reviewer received `.agent-loops/context.md`, repo root, `AGENTS.md`, proof/diff context, and Git/GitHub mutation guardrails; PR changed only `mathbox.py` and `tests/test_mathbox.py` |
 | V1 Codex Automations, broad prompt | runner surface | FAIL | `awl-v1-codex-automation` issue `#1` / PR `#2`: scheduled automations fired, but overlapping reviewer runs left both `needs-fix` and `ready-for-human`; reviewer also caught generated `.agent-loops/evidence` logs in the PR diff |
-| V1 Codex Automations, patched runner + command-only direction | runner surface | BLOCKED | `awl-v1-codex-automation-lock` issue `#1`: automation created `loop/impl/issue-1` but no PR/marker/evidence; outer automation requested direct `gh` permissions instead of only running the guarded command |
-| V1 Claude `/loop` | runner surface | BLOCKED | Claude Code 2.1.195 created scheduled loop `99243117`, but first wakeup blocked on skill/reference file permissions before the guarded tick; fixture issue stayed `ready` with no branch or PR |
+| V1 Codex Automations, patched runner + command-only direction | runner surface | BLOCKED | `awl-v1-codex-automation-final-20260702073341`: app automations fired the guarded command but failed before host work with `error connecting to api.github.com`; adding `localEnvironmentConfigPath=/Users/mkamar/.codex/config.toml` did not fix DNS; issue stayed `ready`, no branch, no PR |
+| V1 Claude `/loop` guarded runner | runner surface | PASS | `awl-v1-claude-loop-final2-20260702074653` scheduled loops `724befb5`, `80fc9a73`, `3b31501b` reached issue `#1` / PR `#2` labeled `ready-for-human`; later wake no-opped; one branch, one PR, two markers; scheduled tasks were cleared after validation |
 
 ## Next Validation Step
 
-Manual user trial is ready on the local foreground supervisor path after the `local-supervisor.sh.tmpl` placeholder fix. For broad V1 launch, fix and rerun Codex Automations and Claude `/loop` validation with explicit permission profiles. The author-only strict rejection evidence from T2/T3/T4 is accepted for `87ff8c3`; do not reopen it unless strict-trust semantics change.
+Manual user trial is ready on the local foreground supervisor path and Claude `/loop` guarded-runner path. For broad V1 launch, Codex Automations still need an app scheduler environment that can resolve and reach `api.github.com`. The author-only strict rejection evidence from T2/T3/T4 is accepted for `87ff8c3`; do not reopen it unless strict-trust semantics change.
 
 Do not return to the unguarded nested runner path: `codex exec -s workspace-write -c approval_policy="never"` can read host state and post markers, but cannot perform the Git claim because `.git/FETCH_HEAD` is auto-protected in this environment. The guarded runner is now the default Codex path.
 

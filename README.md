@@ -1,6 +1,6 @@
 # autonomous-work-loops
 
-A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR workflow. It is currently **Limited V1 GO for the local foreground supervisor**: strict trust, allowlisted dispatch, proof honesty, no-proof routing, duplicate claims, stale recovery, cost-wall recovery, cycle caps, cron-equivalent cadence, planted-defect review routing, and a fresh local-supervisor run have live fixture evidence.
+A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR workflow. It is currently **Limited V1 GO for the local foreground supervisor and Claude `/loop`**: strict trust, allowlisted dispatch, proof honesty, no-proof routing, duplicate claims, stale recovery, cost-wall recovery, cycle caps, cron-equivalent cadence, planted-defect review routing, and fresh runner-surface runs have live fixture evidence.
 
 Tag an issue `ready`. An **Implementer** claims it, writes the change on an isolated branch, proves it, and opens a PR. A **Reviewer** adversarially reviews it. If defects are found, a **Fixer** addresses the feedback and the reviewer re-checks the new head. When proof passes and no blocking defects remain, the PR is labeled `ready-for-human` for you to merge. No human in the loop until the end.
 
@@ -40,10 +40,11 @@ Claude Code users can also install it as a plugin (see [PUBLISHING.md](PUBLISHIN
 # 2. Arm one runner surface
 # Recommended:
 # - Tested V1 path: .agent-loops/runners/local-supervisor.sh "$PWD"
-# - Needs live fix/validation: Codex Automations, Claude /loop
+# - Tested V1 path for Claude users: guarded Claude /loop
+# - Still blocked in this environment: Codex Automations
 ```
 
-V1's tested happy path is the local foreground supervisor. Manual guarded tick commands remain available for debugging, but they are not the intended happy path. Codex Automations and Claude `/loop` are real target surfaces, but live validation found permission/concurrency blockers, so they are not broad-launch paths yet. System cron and GitHub Actions schedules are out of V1 scope.
+V1's tested happy paths are the local foreground supervisor and guarded Claude `/loop`. Manual guarded tick commands remain available for debugging, but they are not the intended happy path. Codex Automations are still blocked in this validation environment because the app automation runtime cannot resolve/reach `api.github.com`. System cron and GitHub Actions schedules are out of V1 scope.
 
 For step-by-step setup and first-trial instructions, see [V1-QUICKSTART.md](V1-QUICKSTART.md).
 
@@ -76,5 +77,6 @@ V1 is implemented and baseline-tested end-to-end on live private GitHub repos wi
 | Cost wall, cycle-cap, cron-equivalent cadence, and planted-defect model comparison | **Guarded-runner PASS** | Cost wall reached `stalled`; cycle cap reached `did-not-converge`; cron-equivalent cadence converged and no-opped; default and `gpt-5.4` reviewers caught the planted defect. |
 | Browser/Playwright proof under Codex sandbox | **Known environment constraint** | Use CI or another runner when local Codex sandbox cannot run browser proof. |
 | Local foreground supervisor as V1 runner surface | **Limited V1 GO** | Fresh fixture `awl-v1-local-supervisor` issue `#1` / PR `#2` reached `ready-for-human`; restart no-opped with one branch and one PR. |
-| Codex Automations and Claude `/loop` as V1 runner surfaces | **NO-GO** | Codex Automations fired but exposed reviewer overlap and permission/profile issues; Claude `/loop` scheduled but blocked on skill-file permissions before the guarded tick. |
+| Claude `/loop` guarded runner as V1 runner surface | **Limited V1 GO** | Fresh fixture `awl-v1-claude-loop-final2-20260702074653` issue `#1` / PR `#2` reached `ready-for-human`; later scheduled wake no-opped; scheduled tasks were cleared after validation. |
+| Codex Automations as V1 runner surface | **NO-GO** | App automations fired the command-only guarded runner but failed with `error connecting to api.github.com`, even with `localEnvironmentConfigPath=/Users/mkamar/.codex/config.toml`; no branch or PR was created. |
 | Maintainer Loop, Core Memory, `loopctl`, evidence consolidation, multi-host adapters | **Designed for V2** | Preserved in `design/PLAN-v2-target.md`; not active in V1. |
