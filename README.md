@@ -43,6 +43,8 @@ Claude Code users can also install it as a plugin (see [PUBLISHING.md](PUBLISHIN
 
 V1's happy path is the local foreground supervisor. It works the same way from Codex, Claude, or another local harness because scheduler behavior is no longer delegated to app-specific automation features. Manual guarded tick commands remain available for troubleshooting, but they are not the intended happy path. Codex Automations, Claude `/loop`, system cron, and GitHub Actions schedules are out of V1 scope.
 
+Bootstrap renders `.agent-loops/setup-labels.sh` so label setup is one idempotent command when labels are missing.
+
 For step-by-step setup and first-trial instructions, see [V1-QUICKSTART.md](V1-QUICKSTART.md).
 
 ## Safety (read before pointing it at a credentialed repo)

@@ -396,6 +396,7 @@ Product commit:
 - Started from `368eae8 docs(v1): clarify setup and runner surfaces`.
 - Static bootstrap UX audit passed at `368eae8`: setup docs covered `gh auth`, authenticated login, safe `trusted_actors`, label commands with `--force`, V1 runner surfaces, and no cron/GitHub Actions setup path.
 - Foreground-only simplification on 2026-07-02 removes Codex Automations and Claude `/loop` from active V1 setup. Current setup docs require one runner surface: `.agent-loops/runners/local-supervisor.sh "$PWD"`.
+- Label setup completion on 2026-07-02 adds rendered helper `.agent-loops/setup-labels.sh`; docs still include direct `gh label create --force` commands as the transparent equivalent.
 
 ### Local Foreground Supervisor
 

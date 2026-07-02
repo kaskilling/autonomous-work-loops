@@ -18,11 +18,17 @@ Bootstrap mode sets up `.agent-loops/` in the target repository and exits. It di
    - `strict` for public or multi-contributor repos.
 6. Build `trusted_actors` from the authenticated GitHub login, explicit maintainers, owners, or named loop dispatchers. Add the authenticated login when `gh api user --jq .login` succeeds and the user is the repo owner, has maintainer/admin/write permission, or is the person explicitly setting up the loop. Do not add every collaborator by default. Leave the list editable. If the authenticated login cannot be proven, stop and ask the user to run `gh auth login`.
 7. Render the only V1 runner surface: the local foreground supervisor. Render from `assets/runners/`: `local-supervisor.sh.tmpl` plus the guarded role runner for the local harness (`codex.sh.tmpl` for Codex CLI, `claude.sh.tmpl` for Claude Code, or both when unsure). The supervisor loops in one visible terminal and invokes exactly one guarded role tick at a time. The guarded role runners keep trust, claim, Git mutation, proof, PRs, labels, and markers in the parent shell; nested Codex or Claude edits the working tree only or returns review text. This avoids managed-sandbox `.git` write denial while keeping the branch-ref claim deterministic. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications. Do not install Codex Automations, Claude `/loop`, system cron, launchd, or GitHub Actions schedules during V1 bootstrap.
-8. Render `.agent-loops/config.yaml`, `.agent-loops/context.md`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
+8. Render `.agent-loops/config.yaml`, `.agent-loops/context.md`, `.agent-loops/setup-labels.sh`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
 
 ## Required Labels
 
-Bootstrap must either create these labels with user approval or print the exact commands in the Bootstrap Report:
+Bootstrap must either create these labels with user approval, render `.agent-loops/setup-labels.sh`, or print the exact commands in the Bootstrap Report:
+
+```sh
+.agent-loops/setup-labels.sh
+```
+
+Equivalent direct commands:
 
 ```sh
 gh label create ready --color 0E8A16 --description "Trusted work ready for autonomous-work-loops intake" --force

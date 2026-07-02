@@ -110,6 +110,12 @@ Use a small repo with a fast proof command.
 3. Create the labels if the Bootstrap Report asks for them:
 
 ```sh
+.agent-loops/setup-labels.sh
+```
+
+Equivalent direct commands:
+
+```sh
 gh label create ready --color 0E8A16 --description "Trusted work ready for autonomous-work-loops intake" --force
 gh label create in-progress --color FBCA04 --description "Autonomous-work-loops has claimed this work" --force
 gh label create needs-fix --color D93F0B --description "Reviewer found blocking defects or proof failed" --force
