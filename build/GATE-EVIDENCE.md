@@ -473,6 +473,11 @@ Observed:
 - A second implementer automation with `localEnvironmentConfigPath=/Users/mkamar/.codex/config.toml` produced the same DNS/network failure.
 - Final state after cleanup: issue `#1` stayed `ready`, no loop branch, no PR.
 - Deleted all 2026-07-02 Codex test automations after evidence capture.
+- Outside-box rerun on 2026-07-02 used worktree execution instead of local execution: fixture repo `Mohamad-Kamar/awl-v1-codex-automation-worktree-20260702150142`, clone `/tmp/awl-v1-codex-automation-worktree-20260702150142`.
+- The worktree automation ran the same command-only guarded implementer prompt and recorded: `Result: runner failed to connect to api.github.com; no work claimed.`
+- Worktree-automation result before cleanup: issue `#1` stayed `ready`, no `loop/impl/issue-*` branch, no PR.
+- A worktree automation with `localEnvironmentConfigPath=/Users/mkamar/.codex/config.toml` could only be rendered as a user-approved suggested automation; the model could not create and run it directly.
+- Deleted the active worktree Codex automation after evidence capture and marked the disposable fixture issue `stalled`.
 
 Required before GO:
 - Codex app scheduler environment must be able to resolve and reach `api.github.com`.

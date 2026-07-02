@@ -12,7 +12,7 @@ Before broad public release, run one final release-candidate smoke from a fresh 
 4. Confirm: one `ready` issue -> claimed -> proven PR -> `ready-for-human`. A clean proven PR may converge on the first review; review->fix cycles happen only when defects are found.
 5. Confirm later intervals no-op cleanly and create no duplicate branch, PR, or review marker.
 
-The guarded-runner matrix is now release-candidate ready, and both the local foreground supervisor path and guarded Claude `/loop` path have Limited V1 GO from fresh live fixtures. Codex Automations were rerun on 2026-07-02 and remain NO-GO because the app automation runtime failed to connect to `api.github.com`. The cadence row is cron-equivalent evidence for the runner/state machine, not actual system cron. System cron and GitHub Actions schedule are out of V1 scope. Browser/Playwright proof remains out of scope unless run in a compatible non-sandboxed surface.
+The guarded-runner matrix is now release-candidate ready, and both the local foreground supervisor path and guarded Claude `/loop` path have Limited V1 GO from fresh live fixtures. Codex Automations were rerun on 2026-07-02 in local and worktree execution modes and remain NO-GO because the app automation runtime failed to connect to `api.github.com`. The cadence row is cron-equivalent evidence for the runner/state machine, not actual system cron. System cron and GitHub Actions schedule are out of V1 scope. Browser/Playwright proof remains out of scope unless run in a compatible non-sandboxed surface.
 
 ## How to publish (three channels, pick based on audience)
 

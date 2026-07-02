@@ -94,7 +94,7 @@ Expected bootstrap output:
 
 The automation prompt should run one guarded role tick and exit. It must not install cron jobs or create more automations. Use a command-only prompt; broad "load the skill" prompts are too loose for unattended scheduling.
 
-Current blocker: the Codex app automation runtime fired the guarded command but could not resolve/reach `api.github.com`, even with a local environment config path. Do not treat this surface as V1 GO until a clean fixture reaches `ready-for-human`.
+Current blocker: the Codex app automation runtime fired the guarded command but could not resolve/reach `api.github.com` in both local and worktree execution modes. Local execution also failed with a local environment config path. Do not treat this surface as V1 GO until a clean fixture reaches `ready-for-human`.
 
 ## Runner Surface 3: Claude `/loop`
 
