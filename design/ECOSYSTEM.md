@@ -64,17 +64,15 @@ Too much machinery for a folder of markdown; the security-conscious audience (ru
 
 ## 5. Runner / heartbeat hosting (the part users actually operate)
 
-The skill *emits* or asks the host app to create runner artifacts; it does not host a daemon. Per ADR-0007 the runner is also the budget wall. Bootstrap should offer these V1 execution surfaces:
+The skill emits runner artifacts; it does not host a daemon. Per ADR-0007 the runner is also the budget wall. Bootstrap should offer one V1 execution surface:
 
-1. **Codex Automations** — default when bootstrap is running in Codex. Create three recurring automations, one for each role, against the repo.
-2. **`/loop` (Claude Code)** — default when bootstrap is running in Claude Code. Create one recurring loop prompt per role.
-3. **Local foreground supervisor** — fallback when the agent product cannot create a native recurring runner. The user starts one terminal process; it cycles guarded implementer/reviewer/fixer ticks until stopped.
+1. **Local foreground supervisor** — the user starts one terminal process; it cycles guarded implementer/reviewer/fixer ticks until stopped.
 
-Manual guarded ticks remain the debugging surface, not the product happy path. Local system cron is excluded from V1 because it needs owned install/update/uninstall and cleanup semantics. GitHub Actions scheduling is also excluded from V1; a hosted CI or bot runner has enough credential, billing, and operational surface to be a separate project unless a later design explicitly adopts it.
+Manual guarded ticks remain the debugging surface, not the product happy path. Codex Automations and Claude `/loop` are excluded from V1 so every harness app follows the same setup path. Local system cron is excluded from V1 because it needs owned install/update/uninstall and cleanup semantics. GitHub Actions scheduling is also excluded from V1; a hosted CI or bot runner has enough credential, billing, and operational surface to be a separate project unless a later design explicitly adopts it.
 
-The skill ships these as **templates in `assets/runners/`**, rendered with the repo's discovered values during bootstrap.
+The skill ships this as **templates in `assets/runners/`**, rendered with the repo's discovered values during bootstrap.
 
-Headless agents load the skill by prompt, not by phantom `--skill`/`--role` flags. The rendered runner should invoke the agent command with a prompt such as: "Load the autonomous-work-loops skill and run exactly one reviewer tick..." and should wrap that invocation in the external wall.
+Headless agents load the skill by prompt, not by phantom `--skill`/`--role` flags. The rendered foreground supervisor should invoke a guarded role runner, and that runner should invoke the agent command with a bounded context prompt and wrap that invocation in the external wall.
 
 ## 6. Credentials & blast radius (ecosystem-level reminder)
 
@@ -87,5 +85,5 @@ Because tick mode runs unattended with whatever credentials the runner has:
 
 - **Package**: single git repo, skill-folder-at-root layout (Option B), with a `.claude-plugin/` wrapper for marketplace install (Option C overall).
 - **Install**: `install.sh` symlinks one clone into all three skill dirs; `/plugin` for Claude users.
-- **Heartbeat**: V1 arms Codex Automations, Claude `/loop`, or a local foreground supervisor. Manual guarded ticks are retained for debugging.
+- **Heartbeat**: V1 starts one local foreground supervisor. Manual guarded ticks are retained for debugging.
 - **Lead marketing message**: multi-agent converging PR factory vs. ralph-loop's single-agent retry.

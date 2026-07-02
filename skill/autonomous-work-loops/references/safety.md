@@ -41,4 +41,4 @@ Autonomous convergence requires objective proof. A passing same-model review wit
 
 ## Credential Boundary
 
-Codex Automations, Claude `/loop`, and the local foreground supervisor use the runner surface's local or product-scoped credentials. Bootstrap must verify `gh auth status` and record the authenticated login before arming a runner. Hosted CI/bot runners need a scoped bot token and are outside the V1 default. Never silently expand credential scope to make a tick pass.
+The local foreground supervisor uses the user's local credentials. Bootstrap must verify `gh auth status` and record the authenticated login before starting a runner. Codex Automations, Claude `/loop`, hosted CI/bot runners, cron, and launchd are outside the V1 default. Never silently expand credential scope to make a tick pass.

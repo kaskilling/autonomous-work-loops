@@ -2,17 +2,17 @@
 
 ## Before broad public release: the gates that matter
 
-The baseline v1 acceptance test passed once on a live private GitHub repo, the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues, allowlisted dispatch acceptance passes, and the guarded runners now claim and converge on live GitHub. No-proof routing, ready-for-human honesty, reviewer idempotency, duplicate-claim race behavior, stale-claim recovery, cost-wall recovery, cycle-cap escalation, cron-equivalent cadence, and planted-defect review routing also pass on guarded fixture runs. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. The V1 product happy paths are currently the local foreground supervisor and guarded Claude `/loop`. Codex Automations are not a broad-launch path until the app scheduler environment can reach GitHub.
+The baseline v1 acceptance test passed once on a live private GitHub repo, the author-only strict rejection retest now passes for untrusted authors and prompt-injection issues, allowlisted dispatch acceptance passes, and the guarded runners now claim and converge on live GitHub. No-proof routing, ready-for-human honesty, reviewer idempotency, duplicate-claim race behavior, stale-claim recovery, cost-wall recovery, cycle-cap escalation, foreground cadence, and planted-defect review routing also pass on guarded fixture runs. In strict mode, executable issues must be authored by `trusted_actors`; external work must be rewritten as a trusted-authored dispatch issue. The V1 product path is now one visible local foreground supervisor. Codex Automations and Claude `/loop` are removed from V1 setup.
 
 Before broad public release, run one final release-candidate smoke from a fresh install:
 
 1. Create a small repo with a real test command and 1–2 `ready` issues.
 2. Bootstrap: `/autonomous-work-loops`.
-3. Arm a tested V1 runner surface: the local foreground supervisor or guarded Claude `/loop`.
+3. Start the tested V1 runner surface: `.agent-loops/runners/local-supervisor.sh "$PWD"`.
 4. Confirm: one `ready` issue -> claimed -> proven PR -> `ready-for-human`. A clean proven PR may converge on the first review; review->fix cycles happen only when defects are found.
 5. Confirm later intervals no-op cleanly and create no duplicate branch, PR, or review marker.
 
-The guarded-runner matrix is now release-candidate ready, and both the local foreground supervisor path and guarded Claude `/loop` path have Limited V1 GO from fresh live fixtures. Codex Automations were rerun on 2026-07-02 in local and worktree execution modes and remain NO-GO because the app automation runtime failed to connect to `api.github.com`. The cadence row is cron-equivalent evidence for the runner/state machine, not actual system cron. System cron and GitHub Actions schedule are out of V1 scope. Browser/Playwright proof remains out of scope unless run in a compatible non-sandboxed surface.
+The guarded-runner matrix is now release-candidate ready, and the local foreground supervisor path has V1 GO from a fresh live fixture. Codex Automations were rerun on 2026-07-02 in local and worktree execution modes and failed to connect to `api.github.com`; Claude `/loop` passed but is also removed from V1 to keep one uniform setup path. The cadence row is foreground-style evidence for the runner/state machine, not actual system cron. System cron and GitHub Actions schedule are out of V1 scope. Browser/Playwright proof remains out of scope unless run in a compatible non-sandboxed surface.
 
 ## How to publish (three channels, pick based on audience)
 

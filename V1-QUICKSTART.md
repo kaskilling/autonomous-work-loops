@@ -1,16 +1,13 @@
 # V1 Quickstart
 
-V1 turns GitHub issues labeled `ready` into proven PRs by arming one runner surface. You create trusted issues; the runner wakes the Implementer, Reviewer, and Fixer ticks until the PR reaches `ready-for-human` or a human-gated terminal state.
+V1 turns GitHub issues labeled `ready` into proven PRs by running one local foreground supervisor. You create trusted issues; the supervisor wakes the Implementer, Reviewer, and Fixer ticks until the PR reaches `ready-for-human` or a human-gated terminal state.
 
 ## Current V1 Flow
 
 1. Install the skill.
 2. Bootstrap a target GitHub repo.
-3. Confirm the Bootstrap Report: proof command, trusted actors, labels, and runner surface.
-4. Arm the tested runner surface:
-   - Local foreground supervisor.
-   - Claude `/loop`.
-   - Codex Automations are documented below, but they are not V1 GO in the current validation environment.
+3. Confirm the Bootstrap Report: proof command, trusted actors, labels, and local runner.
+4. Start the foreground supervisor in one terminal.
 5. Create or rewrite a trusted issue and apply `ready`.
 6. Watch GitHub labels and PR markers:
    - clean path: `ready -> in-progress -> ready-for-human`
@@ -30,7 +27,7 @@ gh auth status
 ```
 
 - A proof command that can run locally, such as `python3 -m pytest -q`, `npm test`, or a repo-specific build/test command.
-- Codex or Claude installed with access to this skill.
+- Codex CLI or Claude Code installed with access to this skill.
 - For Codex guarded runner use on macOS, `gtimeout` is recommended:
 
 ```sh
@@ -59,15 +56,15 @@ Or ask:
 Set up autonomous work loops here.
 ```
 
-Bootstrap should render `.agent-loops/`, write a Bootstrap Report, identify the authenticated GitHub user, add that user to `trusted_actors` when appropriate, and ask or infer the runner surface.
+Bootstrap should render `.agent-loops/`, write a Bootstrap Report, identify the authenticated GitHub user, add that user to `trusted_actors` when appropriate, and render the foreground supervisor plus the guarded role runner for the local harness.
 
 Review the Bootstrap Report before arming a runner. In strict mode, the issue author must be listed in `.agent-loops/config.yaml` under `trusted_actors`; the bootstrap default should include the authenticated maintainer/operator, not every collaborator.
 
 Also review `.agent-loops/context.md`. It is the small context contract every Implementer, Reviewer, and Fixer tick reads before acting. Add repo-specific rules there when they matter, but keep it short and point to existing docs instead of pasting large code or directory listings.
 
-## Runner Surface 1: Local Foreground Supervisor
+## Start The Foreground Supervisor
 
-Use this for the current V1 trial path.
+Use this for V1. It is the only supported runner surface.
 
 Expected bootstrap output:
 
@@ -77,48 +74,18 @@ Expected bootstrap output:
 
 Start it in one terminal and leave it running. Stop it with `Ctrl-C`. It does not install cron, launchd, GitHub Actions, or any persistent scheduler.
 
-## Runner Surface 2: Codex Automations
+The supervisor auto-detects the local guarded role runner:
 
-Status: NO-GO in the current validation environment.
+- Codex users: `.agent-loops/runners/codex.sh`
+- Claude users: `.agent-loops/runners/claude.sh`
 
-Use this when running from Codex.
-
-Expected bootstrap output:
-
-- `.agent-loops/runners/codex.sh`
-- Codex automation prompts from `codex-automation.md.tmpl`
-- three recurring automations or suggested automations:
-  - implementer
-  - reviewer
-  - fixer
-
-The automation prompt should run one guarded role tick and exit. It must not install cron jobs or create more automations. Use a command-only prompt; broad "load the skill" prompts are too loose for unattended scheduling.
-
-Current blocker: the Codex app automation runtime fired the guarded command but could not resolve/reach `api.github.com` in both local and worktree execution modes. Local execution also failed with a local environment config path. Do not treat this surface as V1 GO until a clean fixture reaches `ready-for-human`.
-
-## Runner Surface 3: Claude `/loop`
-
-Status: Limited V1 GO with the guarded Claude runner.
-
-Use this when running from Claude Code.
-
-Expected bootstrap output:
-
-- one `/loop` prompt per role:
-  - implementer
-  - reviewer
-  - fixer
-- `.agent-loops/runners/claude.sh`
-
-Start Claude Code from the target repo with a permission mode that allows the guarded runner command to execute unattended:
+Override detection when needed:
 
 ```sh
-claude --permission-mode bypassPermissions --add-dir "$PWD"
+AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh "$PWD"
 ```
 
-Each loop prompt must run exactly one guarded `claude.sh` role tick and exit. It must not load the skill directly on wake; the guarded runner carries the bounded context pack and owns Git/GitHub mutation.
-
-Live validation fixture `awl-v1-claude-loop-final2-20260702074653` reached `ready-for-human`, later scheduled wakes no-opped, and the disposable scheduled tasks were cleared after validation.
+V1 does not use Codex Automations, Claude `/loop`, system cron, launchd, or GitHub Actions schedules.
 
 ## Manual Debug Commands
 
@@ -139,7 +106,7 @@ Manual ticks are for troubleshooting, not the happy path:
 Use a small repo with a fast proof command.
 
 1. Bootstrap the repo.
-2. Choose the runner surface.
+2. Start `.agent-loops/runners/local-supervisor.sh "$PWD"` in one terminal.
 3. Create the labels if the Bootstrap Report asks for them:
 
 ```sh
@@ -154,7 +121,7 @@ gh label create stalled --color 000000 --description "Runner exceeded retry or r
 
 4. Create a small issue authored by a trusted actor.
 5. Apply `ready`.
-6. Let the armed runner surface work.
+6. Let the foreground supervisor work.
 7. Confirm exactly one `loop/impl/issue-<n>` branch and one PR.
 8. Confirm the PR has proof markers and reaches `ready-for-human`, or one of the human-gated terminal labels.
 9. Confirm no generated `.agent-loops/evidence/` logs appear in the implementation PR diff.
@@ -163,6 +130,8 @@ gh label create stalled --color 000000 --description "Runner exceeded retry or r
 
 - No system cron install.
 - No GitHub Actions schedule.
+- No Codex Automations.
+- No Claude `/loop` scheduler.
 - No GitLab adapter.
 - No hosted bot.
 - No autonomous merge.

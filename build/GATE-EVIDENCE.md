@@ -394,7 +394,8 @@ Evidence:
 
 Product commit:
 - Started from `368eae8 docs(v1): clarify setup and runner surfaces`.
-- Static bootstrap UX audit passed at `368eae8`: setup docs cover `gh auth`, authenticated login, safe `trusted_actors`, label commands with `--force`, V1 runner surfaces, and no cron/GitHub Actions setup path.
+- Static bootstrap UX audit passed at `368eae8`: setup docs covered `gh auth`, authenticated login, safe `trusted_actors`, label commands with `--force`, V1 runner surfaces, and no cron/GitHub Actions setup path.
+- Foreground-only simplification on 2026-07-02 removes Codex Automations and Claude `/loop` from active V1 setup. Current setup docs require one runner surface: `.agent-loops/runners/local-supervisor.sh "$PWD"`.
 
 ### Local Foreground Supervisor
 
@@ -453,7 +454,7 @@ Evidence:
 
 ### Codex Automations
 
-Verdict: NO-GO for broad V1 launch
+Verdict: REMOVED FROM V1
 
 Observed:
 - Fixture repo `Mohamad-Kamar/awl-v1-codex-automation`, clone `/tmp/awl-v1-codex-automation`.
@@ -480,13 +481,14 @@ Observed:
 - Deleted the active worktree Codex automation after evidence capture and marked the disposable fixture issue `stalled`.
 
 Required before GO:
-- Codex app scheduler environment must be able to resolve and reach `api.github.com`.
+- This surface is no longer part of V1. Reintroduce it only as a later separately validated runner profile.
+- If reintroduced, the Codex app scheduler environment must be able to resolve and reach `api.github.com`.
 - The automation prompt must remain command-only and invoke exactly one guarded runner role.
 - Rerun on a clean fixture to terminal state after the scheduler network profile is fixed.
 
 ### Claude `/loop`
 
-Verdict: PASS
+Verdict: REMOVED FROM V1 AFTER PASSING VALIDATION
 
 Observed:
 - Fixture repo `Mohamad-Kamar/awl-v1-claude-loop`, clone `/tmp/awl-v1-claude-loop`.
@@ -510,6 +512,7 @@ Observed:
 - PR files are only `mathbox.py` and `tests/test_mathbox.py`; no generated evidence logs were included.
 - Later scheduled wake no-opped: `no trusted ready work`, `no reviewable loop PR`, `no fixable loop PR`.
 - Cleanup: stopped Claude Code and cleared `.claude/scheduled_tasks.json` for the disposable fixture.
+- Product decision on 2026-07-02: remove Claude `/loop` from V1 setup despite the pass so every user gets the same foreground-supervisor flow.
 
 Evidence:
 - Implementer prompt snapshot: `/tmp/awl-v1-claude-loop-final2-20260702074653/.agent-loops/evidence/prove-the-gate/logs/guarded-implementer-20260702-075038-issue-1-prompt.log`.

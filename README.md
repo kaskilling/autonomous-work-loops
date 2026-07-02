@@ -1,10 +1,10 @@
 # autonomous-work-loops
 
-A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR workflow. It is currently **Limited V1 GO for the local foreground supervisor and Claude `/loop`**: strict trust, allowlisted dispatch, proof honesty, no-proof routing, duplicate claims, stale recovery, cost-wall recovery, cycle caps, cron-equivalent cadence, planted-defect review routing, and fresh runner-surface runs have live fixture evidence.
+A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR workflow. V1 has one supported runner surface: the **local foreground supervisor**. Strict trust, allowlisted dispatch, proof honesty, no-proof routing, duplicate claims, stale recovery, cost-wall recovery, cycle caps, cadence, planted-defect review routing, and the foreground supervisor have live fixture evidence.
 
 Tag an issue `ready`. An **Implementer** claims it, writes the change on an isolated branch, proves it, and opens a PR. A **Reviewer** adversarially reviews it. If defects are found, a **Fixer** addresses the feedback and the reviewer re-checks the new head. When proof passes and no blocking defects remain, the PR is labeled `ready-for-human` for you to merge. No human in the loop until the end.
 
-It is **not a daemon**. It's a bootstrapper plus a stateless single-tick executor: an explicit runner surface re-invokes one role per tick, and all state lives on the host (labels + commit-stamped marker comments), never in agent memory.
+It is **not a daemon**. It's a bootstrapper plus a stateless single-tick executor: the foreground supervisor re-invokes one role per tick, and all state lives on the host (labels + commit-stamped marker comments), never in agent memory.
 
 ## How it differs from `ralph-loop`
 
@@ -37,14 +37,11 @@ Claude Code users can also install it as a plugin (see [PUBLISHING.md](PUBLISHIN
 /autonomous-work-loops          # or: "set up autonomous work loops here"
 # -> discovers host/proof/trust/current gh user, renders .agent-loops/, emits runners, writes a Bootstrap Report
 
-# 2. Arm one runner surface
-# Recommended:
-# - Tested V1 path: .agent-loops/runners/local-supervisor.sh "$PWD"
-# - Tested V1 path for Claude users: guarded Claude /loop
-# - Still blocked in this environment: Codex Automations
+# 2. Start the only V1 runner surface
+.agent-loops/runners/local-supervisor.sh "$PWD"
 ```
 
-V1's tested happy paths are the local foreground supervisor and guarded Claude `/loop`. Manual guarded tick commands remain available for debugging, but they are not the intended happy path. Codex Automations are still blocked in this validation environment because the app automation runtime cannot resolve/reach `api.github.com`. System cron and GitHub Actions schedules are out of V1 scope.
+V1's happy path is the local foreground supervisor. It works the same way from Codex, Claude, or another local harness because scheduler behavior is no longer delegated to app-specific automation features. Manual guarded tick commands remain available for troubleshooting, but they are not the intended happy path. Codex Automations, Claude `/loop`, system cron, and GitHub Actions schedules are out of V1 scope.
 
 For step-by-step setup and first-trial instructions, see [V1-QUICKSTART.md](V1-QUICKSTART.md).
 
@@ -74,9 +71,8 @@ V1 is implemented and baseline-tested end-to-end on live private GitHub repos wi
 | Strict dispatch acceptance | **PASS** | T5 issue `#9` converged to PR `#10`; guarded runner issue `#11` converged to PR `#12`. |
 | Failed-proof routing | **Smoke-tested PASS** | Red proof routed to `needs-fix`; see `build/GATE-RESULTS.md`. |
 | No-proof, proof honesty, duplicate-claim, stale-claim, and reviewer idempotency | **Guarded-runner PASS** | T7/T8/T10/T11/T12 passed on live GitHub; see `build/GATE-RESULTS.md`. |
-| Cost wall, cycle-cap, cron-equivalent cadence, and planted-defect model comparison | **Guarded-runner PASS** | Cost wall reached `stalled`; cycle cap reached `did-not-converge`; cron-equivalent cadence converged and no-opped; default and `gpt-5.4` reviewers caught the planted defect. |
+| Cost wall, cycle-cap, foreground cadence, and planted-defect model comparison | **Guarded-runner PASS** | Cost wall reached `stalled`; cycle cap reached `did-not-converge`; foreground-style cadence converged and no-opped; default and `gpt-5.4` reviewers caught the planted defect. |
 | Browser/Playwright proof under Codex sandbox | **Known environment constraint** | Use CI or another runner when local Codex sandbox cannot run browser proof. |
-| Local foreground supervisor as V1 runner surface | **Limited V1 GO** | Fresh fixture `awl-v1-local-supervisor` issue `#1` / PR `#2` reached `ready-for-human`; restart no-opped with one branch and one PR. |
-| Claude `/loop` guarded runner as V1 runner surface | **Limited V1 GO** | Fresh fixture `awl-v1-claude-loop-final2-20260702074653` issue `#1` / PR `#2` reached `ready-for-human`; later scheduled wake no-opped; scheduled tasks were cleared after validation. |
-| Codex Automations as V1 runner surface | **NO-GO** | Local and worktree app automations fired the command-only guarded runner but failed with `error connecting to api.github.com`, even with local environment config on the local path; no branch or PR was created. |
+| Local foreground supervisor as V1 runner surface | **V1 GO** | Fresh fixture `awl-v1-local-supervisor` issue `#1` / PR `#2` reached `ready-for-human`; restart no-opped with one branch and one PR. |
+| App-native schedulers | **Removed from V1** | Codex Automations and Claude `/loop` are no longer V1 setup paths; they can return later only after independent live validation. |
 | Maintainer Loop, Core Memory, `loopctl`, evidence consolidation, multi-host adapters | **Designed for V2** | Preserved in `design/PLAN-v2-target.md`; not active in V1. |

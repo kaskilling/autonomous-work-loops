@@ -27,7 +27,7 @@ budgets:
 
 ## Runner-Enforced Limits
 
-Runtime and cost can be exceeded while the agent is busy, so the runner must wrap every tick in the strongest external wall its surface supports. The guarded Codex runner and local foreground supervisor use `timeout`, `gtimeout`, or their shell fallback. Codex Automations should invoke the guarded runner when available. Claude `/loop` must either shell out through a guarded runner or record the weaker guarantee in the Bootstrap Report. GitHub Actions schedules are outside V1.
+Runtime and cost can be exceeded while the agent is busy, so the foreground supervisor must invoke guarded role runners that wrap every tick in the strongest external wall available: `timeout`, `gtimeout`, or the shell fallback. Codex Automations, Claude `/loop`, cron, launchd, and GitHub Actions schedules are outside V1.
 
 ## Killed Ticks
 

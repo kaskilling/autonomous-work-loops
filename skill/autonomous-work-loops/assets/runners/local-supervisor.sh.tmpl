@@ -10,9 +10,21 @@ interval_seconds="${AWL_SUPERVISOR_INTERVAL_SECONDS:-}"
 [ -n "$interval_seconds" ] || interval_seconds="{{interval_seconds}}"
 case "$interval_seconds" in ""|*"{{"*) interval_seconds=600 ;; esac
 
-runner="${repo}/.agent-loops/runners/codex.sh"
+runner="${AWL_ROLE_RUNNER:-}"
+if [ -z "$runner" ]; then
+  if command -v codex >/dev/null 2>&1 && [ -x "${repo}/.agent-loops/runners/codex.sh" ]; then
+    runner="${repo}/.agent-loops/runners/codex.sh"
+  elif command -v claude >/dev/null 2>&1 && [ -x "${repo}/.agent-loops/runners/claude.sh" ]; then
+    runner="${repo}/.agent-loops/runners/claude.sh"
+  else
+    echo "No guarded role runner found." >&2
+    echo "Install Codex CLI or Claude Code, or set AWL_ROLE_RUNNER to a guarded role runner path." >&2
+    exit 1
+  fi
+fi
+
 if [ ! -x "$runner" ]; then
-  echo "Missing executable guarded runner: $runner" >&2
+  echo "Missing executable guarded role runner: $runner" >&2
   exit 1
 fi
 
