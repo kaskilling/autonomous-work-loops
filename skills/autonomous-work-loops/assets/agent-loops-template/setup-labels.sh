@@ -2,10 +2,7 @@
 # Create or update the GitHub labels required by autonomous-work-loops.
 set -euo pipefail
 
-repo_arg=()
-if [ "${1:-}" != "" ]; then
-  repo_arg=(--repo "$1")
-fi
+repo="${1:-}"
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "Missing GitHub CLI: install gh and run gh auth login first." >&2
@@ -14,12 +11,23 @@ fi
 
 gh auth status >/dev/null
 
-gh label create ready --color 0E8A16 --description "Trusted work ready for autonomous-work-loops intake" --force "${repo_arg[@]}"
-gh label create in-progress --color FBCA04 --description "Autonomous-work-loops has claimed this work" --force "${repo_arg[@]}"
-gh label create needs-fix --color D93F0B --description "Reviewer found blocking defects or proof failed" --force "${repo_arg[@]}"
-gh label create ready-for-human --color 5319E7 --description "Proof passed and autonomous review converged" --force "${repo_arg[@]}"
-gh label create unproven --color BFDADC --description "No accepted proof command is configured or available" --force "${repo_arg[@]}"
-gh label create did-not-converge --color B60205 --description "Review/fix cycle cap reached with blockers remaining" --force "${repo_arg[@]}"
-gh label create stalled --color 000000 --description "Runner exceeded retry or runtime wall and needs a human" --force "${repo_arg[@]}"
+create_label() {
+  name="$1"
+  color="$2"
+  description="$3"
+  if [ -n "$repo" ]; then
+    gh label create "$name" --color "$color" --description "$description" --force --repo "$repo"
+  else
+    gh label create "$name" --color "$color" --description "$description" --force
+  fi
+}
+
+create_label ready 0E8A16 "Trusted work ready for autonomous-work-loops intake"
+create_label in-progress FBCA04 "Autonomous-work-loops has claimed this work"
+create_label needs-fix D93F0B "Reviewer found blocking defects or proof failed"
+create_label ready-for-human 5319E7 "Proof passed and autonomous review converged"
+create_label unproven BFDADC "No accepted proof command is configured or available"
+create_label did-not-converge B60205 "Review/fix cycle cap reached with blockers remaining"
+create_label stalled 000000 "Runner exceeded retry or runtime wall and needs a human"
 
 echo "autonomous-work-loops labels are ready."
