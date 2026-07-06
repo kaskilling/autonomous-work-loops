@@ -2,9 +2,11 @@
 
 Turn trusted GitHub issues into proven, reviewed PRs.
 
-**Status:** ready for private development and targeted validation. Do not treat
-this as broad public-launch ready until a fresh-install smoke and each packaging
-install path pass from a clean agent home.
+**Status:** ready for private development and targeted validation installs.
+The 2026-07-06 release-candidate pass proved a fresh public clone, standard
+skill installer paths, Codex and Claude plugin installs from clean temp homes,
+and a live foreground-supervisor smoke. Keep broad public launch and unattended
+use behind real user trials and pinned release tags.
 
 You write a clear issue and add the `ready` label. A local supervisor runs three
 agent roles:
@@ -169,12 +171,18 @@ For publishing notes, see [PUBLISHING.md](PUBLISHING.md).
 
 ## Current Status
 
-V1 is implemented and baseline-tested on live private GitHub repos with Codex.
-The current happy path is the local foreground supervisor:
+V1 is implemented and tested on live private GitHub repos. The current happy
+path is the local foreground supervisor:
 
 ```sh
 .agent-loops/runners/local-supervisor.sh "$PWD"
 ```
 
-Known constraint: browser or Playwright proof can fail under locked local Codex
-sandboxes. Use a compatible runner or CI for that class of proof.
+The latest release-candidate smoke used a fresh public clone, clean agent homes,
+and the generated Claude role runner to move issue #1 to PR #2 with
+`ready-for-human` in `kaskilling/awl-live-smoke-20260706`.
+
+Known constraints: browser or Playwright proof can fail under locked local Codex
+sandboxes. On this machine, the nested Codex role runner also hit a local Codex
+state/app-server permission blocker during the fresh smoke; the supervisor
+recovered and converged with the generated Claude role runner.

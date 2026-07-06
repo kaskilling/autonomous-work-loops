@@ -6,8 +6,8 @@ This is the practical checklist. For the *why* behind channel choices, see `PUBL
 
 ## Are we ready to publish? — honest answer
 
-**Ready for: private development and targeted validation, including controlled install trials.**
-**Not ready for: broad public soft launch, unattended public use, or marketplace/plugin distribution.**
+**Ready for: private development and targeted validation installs.**
+**Not ready for: broad public launch or unattended public use without external user trials and pinned release tags.**
 
 | Check | State |
 |---|---|
@@ -17,12 +17,15 @@ This is the practical checklist. For the *why* behind channel choices, see `PUBL
 | Baseline live run passed (GitHub + Codex + pytest) | ✅ once |
 | Guarded-runner matrix (strict-trust, no-proof, failed-proof, runner cadence, dup-claim, stale-claim) | ✅ strong targeted-validation signal in `build/GATE-RESULTS.md` |
 | Browser-compatible proof | ⏳ still needs a compatible non-sandboxed surface |
-| Fresh-install release-candidate smoke | ⏳ required before broad public launch |
-| Standard skill installer install | ⏳ prove nested `skills/autonomous-work-loops` resolution or publish a wrapper |
-| Codex plugin install | ⏳ prove a clean pinned marketplace/repo install loads the plugin and skill |
-| Claude plugin install | ⏳ prove a clean pinned marketplace/repo install loads the plugin and skill |
+| Fresh-install release-candidate smoke | ✅ passed 2026-07-06 on `kaskilling/awl-live-smoke-20260706` |
+| Standard skill installer install | ✅ nested `skills/autonomous-work-loops` resolution passed |
+| Codex plugin install | ✅ clean temp-home local-marketplace install passed |
+| Claude plugin install | ✅ clean temp-home local-marketplace install passed |
+| Root license | ✅ MIT `LICENSE` present and detected by GitHub |
 
-**Recommendation:** keep this in targeted validation until one fresh-install release-candidate smoke passes on the V1 local supervisor and the standard skill installer, Codex plugin, and Claude plugin packaging installs each pass from a clean agent home. The previous soft-launch recommendation is superseded by `build/GATE-RESULTS.md`.
+**Recommendation:** keep this in targeted validation until at least one external
+user repeats the fresh-install smoke from a pinned tag. The previous soft-launch
+recommendation is superseded by `build/GATE-RESULTS.md`.
 
 ---
 
@@ -61,23 +64,35 @@ That drops the skill into `~/.claude/skills`, `~/.codex/skills`, `~/.agents/skil
 
 ### Channel B — Standard skill installer
 
-This is a packaging target, not a public recommendation, until the clean install test passes. Once the repo path is stable, verify the nested skill can be installed with a standard skill installer:
+The clean install test passed on 2026-07-06. The nested skill can be installed
+with a standard skill installer:
 
 ```sh
 npx skills@latest add kaskilling/autonomous-work-loops
 ```
 
-If the installer cannot resolve `skills/autonomous-work-loops` from this repo shape, publish a tiny wrapper or package that exposes the skill folder directly. This should become the shortest public setup path after the install proof passes.
+For an explicit Codex copy install:
+
+```sh
+npx skills@latest add kaskilling/autonomous-work-loops --skill autonomous-work-loops --agent codex --copy
+```
 
 ### Channel C — Codex plugin marketplace
 
-This is a packaging target, not a public recommendation, until a clean Codex install test passes. The repo now has `.codex-plugin/plugin.json`. To make it Codex-installable through a marketplace, add a marketplace entry that points at this repo and pins a tag or commit. The manifest points Codex at the real `./skills/` tree and includes app-facing metadata.
+The clean temp-home local-marketplace install test passed on 2026-07-06. The
+repo now has `.codex-plugin/plugin.json`. To make it Codex-installable through a
+marketplace, add a marketplace entry that points at this repo and pins a tag or
+commit. The manifest points Codex at the real `./skills/` tree and includes
+app-facing metadata.
 
-**Proof needed:** install the pinned Codex plugin from a clean agent home and verify Codex loads the plugin metadata and exposes `/autonomous-work-loops`. Pin releases deliberately because the plugin can mutate credentialed repos.
+Pin releases deliberately because the plugin can mutate credentialed repos.
 
 ### Channel D — Claude Code one-click (plugin marketplace)
 
-This is a packaging target, not a public recommendation, until a clean Claude Code install test passes. The repo already has `.claude-plugin/plugin.json`. To make it `/plugin`-installable, create a tiny **marketplace repo** (or add a marketplace file to this one):
+The clean temp-home local-marketplace install test passed on 2026-07-06. The
+repo already has `.claude-plugin/plugin.json`. To make it
+`/plugin`-installable, create a tiny **marketplace repo** (or add a marketplace
+file to this one):
 
 `.claude-plugin/marketplace.json`:
 ```json
@@ -100,11 +115,12 @@ Users then run:
 /plugin install autonomous-work-loops
 ```
 
-**Proof needed:** install the pinned Claude plugin from a clean agent home and verify Claude Code loads the plugin metadata and exposes `/autonomous-work-loops`. Pin `ref` to the **tag** (`v0.1.0`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
+Pin `ref` to the **tag** (`v0.1.0`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
 
 ### Channel E — Public discovery (the launch post)
 
-Once the fresh-install smoke and packaging install tests pass, announce it. Use the material already written:
+Once an external user repeats the fresh-install smoke from a pinned tag,
+announce it. Use the material already written:
 - The **ralph-loop vs autonomous-work-loops table** in `design/ECOSYSTEM.md` — paste verbatim.
 - The **three one-liners** in `PUBLISHING.md` (reviewed-not-retried / guarded autonomy / no-black-box).
 - A short **GIF of the label board moving** `ready → in-progress → ready-for-human` — the single most convincing artifact.
@@ -119,5 +135,5 @@ Once the fresh-install smoke and packaging install tests pass, announce it. Use 
 1. Keep strict-trust semantics author-only and committed.
 2. Treat T2/T3/T4 as passed only with auditor-verified evidence from `build/GATE-RESULTS.md`.
 3. Rerun replacement T5 on a Git-capable Codex surface to prove allowlisted dispatch issues still work.
-4. Run the fresh-install smoke on the V1 local supervisor.
-5. Prove standard skill installer, Codex plugin, and Claude plugin installs from clean agent homes before any public plugin or "leave it running" announcement.
+4. Use the 2026-07-06 fresh-install smoke as the internal baseline.
+5. Ask one external user to repeat standard skill installer, Codex plugin, and Claude plugin installs from clean agent homes before any broad public plugin or "leave it running" announcement.
