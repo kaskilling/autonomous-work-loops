@@ -279,7 +279,7 @@ Observed:
 Verdict: PASS for stale-reclaim; cost-wall and cycle-cap remain unrun.
 
 Observed:
-- Added stale-claim handling to `build/harness/run-guarded-tick.sh` and `skill/autonomous-work-loops/assets/runners/codex.sh.tmpl`.
+- Added stale-claim handling to `build/harness/run-guarded-tick.sh` and `skills/autonomous-work-loops/assets/runners/codex.sh.tmpl`.
 - Created issue `#15` in `Mohamad-Kamar/awl-gate`, labeled it `in-progress`, and posted an old implementer marker with `ts=2020-01-01T00:00:00Z`.
 - No remote branch existed for `loop/impl/issue-15`.
 - First guarded implementer tick posted a stale-release marker, removed `in-progress`, and added `ready`.
@@ -394,7 +394,7 @@ Evidence:
 
 Product commit:
 - Started from `368eae8 docs(v1): clarify setup and runner surfaces`.
-- Static bootstrap UX audit passed at `368eae8`: setup docs covered `gh auth`, authenticated login, safe `trusted_actors`, label commands with `--force`, V1 runner surfaces, and no cron/GitHub Actions setup path.
+- Static bootstrap UX audit passed at `368eae8`: setup docs covered `gh auth`, authenticated login, safe `trusted_actors`, label commands with `--force`, runner setup, and no cron/GitHub Actions setup path.
 - Foreground-only simplification on 2026-07-02 removes Codex Automations and Claude `/loop` from active V1 setup. Current setup docs require one runner surface: `.agent-loops/runners/local-supervisor.sh "$PWD"`.
 - Label setup completion on 2026-07-02 adds rendered helper `.agent-loops/setup-labels.sh`; docs still include direct `gh label create --force` commands as the transparent equivalent.
 
@@ -465,7 +465,7 @@ Observed:
 - Live failure 2: generated `.agent-loops/evidence/prove-the-gate/logs/*` files were included in the PR diff; the adversarial reviewer correctly routed that to `needs-fix`.
 - Deleted the three test Codex automations after evidence capture.
 - Patched the guarded runner to skip `.agent-loops/evidence/` during staging and to create a per-PR-head review lock before nested review.
-- Patched `codex-automation.md.tmpl` to use a command-only prompt instead of a broad "load the skill" prompt.
+- Patched the now-deleted historical `codex-automation.md.tmpl` to use a command-only prompt instead of a broad "load the skill" prompt.
 - Fresh patched fixture repo `Mohamad-Kamar/awl-v1-codex-automation-lock`, clone `/tmp/awl-v1-codex-automation-lock`, still blocked: issue `#1` became `in-progress` and branch `loop/impl/issue-1` was created, but no PR, marker, or evidence log was produced.
 - Process inspection showed the outer Codex automation agent was reconstructing the workflow and requesting direct `gh` permissions, rather than only running the guarded command.
 - Deleted the three patched-fixture Codex automations after evidence capture.
@@ -499,8 +499,8 @@ Observed:
 - The guarded runner never executed: fixture issue `#1` stayed `ready`; no `loop/*` branch and no PR existed.
 - Stopped the interactive Claude process after evidence capture; `ps auxww | rg '[c]laude'` showed no remaining Claude process.
 - Cleanup: removed `ready` from the disposable Claude fixture issue.
-- Patched V1 to add a guarded Claude runner: `skill/autonomous-work-loops/assets/runners/claude.sh.tmpl`.
-- Patched `loop.md.tmpl` so `/loop` schedules run exactly one guarded `claude.sh` role command per wake instead of loading skill/reference files directly.
+- Patched V1 to add a guarded Claude runner: `skills/autonomous-work-loops/assets/runners/claude.sh.tmpl`.
+- Patched the now-deleted historical `loop.md.tmpl` so `/loop` schedules run exactly one guarded `claude.sh` role command per wake instead of loading skill/reference files directly.
 - First 2026-07-02 rerun exposed a real CLI argument bug: `claude -p --add-dir "$repo" "$prompt"` lets `--add-dir` consume the prompt. Patched the runner to pass `-- "$prompt"`.
 - Fresh passing fixture repo: `Mohamad-Kamar/awl-v1-claude-loop-final2-20260702074653`.
 - Local clone: `/tmp/awl-v1-claude-loop-final2-20260702074653`.

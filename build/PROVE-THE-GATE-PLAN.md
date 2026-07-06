@@ -403,7 +403,7 @@ Run T5 only from a surface where the loop-engine process can mutate the repo's G
 - the runner can create, push, and delete a disposable branch in the fixture repo.
 - `gh auth status` is authenticated for issue/PR mutation.
 
-If any preflight fails, stop and switch runner surfaces. Do not spend another T5 attempt on a surface that cannot claim work. If nested `codex exec` cannot write `.git`, use the guarded runner: parent shell performs trust, claim, proof, PR, labels, and markers while nested Codex only edits workspace files.
+If any preflight fails, stop and classify the blocker before another attempt. Do not spend another T5 attempt on a role engine that cannot claim work. If nested `codex exec` cannot write `.git`, use the guarded runner path: parent shell performs trust, claim, proof, PR, labels, and markers while nested Codex only edits workspace files.
 
 - [x] **Step 3: Configure strict dispatch, create a fresh benign issue, and run the loop**
 
@@ -708,7 +708,7 @@ Prediction: a tick wrapped by the runner's `gtimeout` is killed at the wall and 
 
 ```bash
 # render a 1-minute-wall runner and run a deliberately slow no-op prompt; confirm it is killed ~60s
-sed 's/{{timeout_minutes}}/1/' $PRODUCT_REPO/skill/autonomous-work-loops/assets/runners/codex.sh.tmpl | sed 's#{{repo_path}}#$FIXTURE_ROOT/awl-gate#;s#{{role}}#reviewer#;s/{{model}}//' > $FIXTURE_ROOT/wall1.sh
+sed 's/{{timeout_minutes}}/1/' $PRODUCT_REPO/skills/autonomous-work-loops/assets/runners/codex.sh.tmpl | sed 's#{{repo_path}}#$FIXTURE_ROOT/awl-gate#;s#{{role}}#reviewer#;s/{{model}}//' > $FIXTURE_ROOT/wall1.sh
 # macOS may not have GNU timeout; prefer timeout, then gtimeout, matching the runner design.
 TIMEOUT_BIN=$(command -v timeout || command -v gtimeout || true)
 [ -n "$TIMEOUT_BIN" ] || { echo "COST-WALL SKIP: install coreutils for gtimeout or run on a host with timeout"; exit 0; }

@@ -1,0 +1,38 @@
+{
+  "name": "autonomous-work-loops",
+  "version": "0.1.0",
+  "description": "Bootstrap and run a reviewed, converging implement/review/fix PR loop for trusted GitHub issues.",
+  "author": {
+    "name": "mkamar"
+  },
+  "homepage": "https://github.com/kaskilling/autonomous-work-loops",
+  "repository": "https://github.com/kaskilling/autonomous-work-loops",
+  "keywords": [
+    "github",
+    "issues",
+    "pull-requests",
+    "agents",
+    "automation",
+    "skills"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Autonomous Work Loops",
+    "shortDescription": "Turn trusted GitHub issues into proven, reviewed PRs.",
+    "longDescription": "Bootstrap a target GitHub repo with local foreground runners that claim trusted ready issues, implement changes, run proof, review the PR, fix blockers, and hand the result to a human for final merge.",
+    "developerName": "mkamar",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/kaskilling/autonomous-work-loops",
+    "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
+    "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
+    "defaultPrompt": [
+      "Set up autonomous work loops here",
+      "Run an autonomous work loop preflight",
+      "Help me start the local supervisor"
+    ]
+  }
+}

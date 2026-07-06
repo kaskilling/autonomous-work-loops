@@ -1,0 +1,371 @@
+#!/usr/bin/env bash
+# Deterministic bootstrap for autonomous-work-loops target repositories.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: bootstrap.sh [--force] [--allow-incomplete] [target-repo]
+
+Copies agent-loops-template into <target-repo>/.agent-loops, renders local
+runner scripts, fills conservative discovered defaults, and writes
+.agent-loops/BOOTSTRAP-REPORT.md.
+
+Defaults:
+  target-repo  current working directory
+
+Options:
+  --force             replace an existing .agent-loops directory
+  --allow-incomplete  scaffold even when the target is not a GitHub git repo
+  -h, --help          show this help
+EOF
+}
+
+force=0
+allow_incomplete=0
+target="${PWD}"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --force)
+      force=1
+      shift
+      ;;
+    --allow-incomplete)
+      allow_incomplete=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      printf 'unknown option: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      target="$1"
+      shift
+      if [ "$#" -gt 0 ]; then
+        printf 'unexpected extra argument: %s\n' "$1" >&2
+        usage >&2
+        exit 2
+      fi
+      ;;
+  esac
+done
+
+if [ "$#" -gt 0 ]; then
+  target="$1"
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  printf 'python3 is required to render bootstrap files.\n' >&2
+  exit 1
+fi
+
+if [ ! -d "$target" ]; then
+  printf 'target repo path does not exist: %s\n' "$target" >&2
+  exit 1
+fi
+
+target="$(cd "$target" && pwd -P)"
+
+if [ "$allow_incomplete" -ne 1 ]; then
+  if ! git -C "$target" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    printf 'target is not a git worktree: %s\n' "$target" >&2
+    printf 'run from a GitHub repo, or pass --allow-incomplete for manual scaffolding.\n' >&2
+    exit 1
+  fi
+  origin_url="$(git -C "$target" remote get-url origin 2>/dev/null || true)"
+  case "$origin_url" in
+    *github.com*) ;;
+    *)
+      printf 'target origin remote is not GitHub: %s\n' "${origin_url:-'(missing)'}" >&2
+      printf 'V1 supports GitHub only, or pass --allow-incomplete for manual scaffolding.\n' >&2
+      exit 1
+      ;;
+  esac
+fi
+
+assets_dir="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+template_dir="${assets_dir}/agent-loops-template"
+runner_template_dir="${assets_dir}/runners"
+dest="${target}/.agent-loops"
+
+if [ ! -d "$template_dir" ]; then
+  printf 'missing template directory: %s\n' "$template_dir" >&2
+  exit 1
+fi
+
+if [ ! -d "$runner_template_dir" ]; then
+  printf 'missing runner template directory: %s\n' "$runner_template_dir" >&2
+  exit 1
+fi
+
+if [ -e "$dest" ] && [ "$force" -ne 1 ]; then
+  printf 'refusing to overwrite existing %s\n' "$dest" >&2
+  printf 'rerun with --force to replace it.\n' >&2
+  exit 1
+fi
+
+tmp="${target}/.agent-loops.tmp.$$"
+rm -rf "$tmp"
+trap 'rm -rf "$tmp"' EXIT
+
+cp -R "$template_dir" "$tmp"
+mkdir -p "$tmp/runners" "$tmp/evidence/inbox"
+
+gh_user=""
+repo_json=""
+gh_status="not checked: gh not found"
+if command -v gh >/dev/null 2>&1; then
+  if gh auth status >/dev/null 2>&1; then
+    gh_status="authenticated"
+  else
+    gh_status="gh auth status failed"
+  fi
+  gh_user="$(gh api user --jq .login 2>/dev/null || true)"
+  repo_json="$(cd "$target" && gh repo view --json nameWithOwner,owner,visibility,viewerPermission,defaultBranchRef,hasIssuesEnabled 2>/dev/null || true)"
+fi
+
+AWL_TARGET="$target" \
+AWL_TMP="$tmp" \
+AWL_RUNNER_TEMPLATES="$runner_template_dir" \
+AWL_GH_USER="$gh_user" \
+AWL_GH_STATUS="$gh_status" \
+AWL_REPO_JSON="$repo_json" \
+python3 - <<'PY'
+import json
+import os
+import re
+from pathlib import Path
+
+target = Path(os.environ["AWL_TARGET"])
+tmp = Path(os.environ["AWL_TMP"])
+runner_templates = Path(os.environ["AWL_RUNNER_TEMPLATES"])
+gh_user = os.environ.get("AWL_GH_USER", "").strip()
+gh_status = os.environ.get("AWL_GH_STATUS", "")
+repo_json_raw = os.environ.get("AWL_REPO_JSON", "").strip()
+
+
+def shell_double(value: str) -> str:
+    return (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("$", "\\$")
+        .replace("`", "\\`")
+    )
+
+
+def render_template(src: Path, dst: Path) -> None:
+    text = src.read_text()
+    replacements = {
+        "{{repo_path}}": shell_double(str(target)),
+        "{{interval_seconds}}": "600",
+        "{{role}}": "implementer",
+        "{{model}}": "",
+        "{{timeout_minutes}}": "30",
+    }
+    for key, value in replacements.items():
+        text = text.replace(key, value)
+    dst.write_text(text)
+
+
+for name in ("local-supervisor.sh", "guarded-role-runner-common.sh", "codex.sh", "claude.sh"):
+    source = runner_templates / f"{name}.tmpl"
+    if not source.exists():
+        raise SystemExit(f"missing runner template: {source}")
+    render_template(source, tmp / "runners" / name)
+
+
+def package_manager(package_json: dict) -> str:
+    declared = str(package_json.get("packageManager", "")).split("@", 1)[0]
+    if declared in {"npm", "pnpm", "yarn", "bun"}:
+        return declared
+    if (target / "pnpm-lock.yaml").exists():
+        return "pnpm"
+    if (target / "yarn.lock").exists():
+        return "yarn"
+    if (target / "bun.lockb").exists() or (target / "bun.lock").exists():
+        return "bun"
+    return "npm"
+
+
+def package_script_command(manager: str, script: str) -> str:
+    if manager == "npm":
+        return "npm test" if script == "test" else f"npm run {script}"
+    if manager == "pnpm":
+        return f"pnpm {script}"
+    if manager == "yarn":
+        return f"yarn {script}"
+    if manager == "bun":
+        return f"bun run {script}"
+    return ""
+
+
+proof = {"test": "", "build": "", "lint": ""}
+proof_sources = {"test": "", "build": "", "lint": ""}
+package_json_path = target / "package.json"
+if package_json_path.exists():
+    try:
+        package_json = json.loads(package_json_path.read_text())
+        scripts = package_json.get("scripts", {})
+        if isinstance(scripts, dict):
+            manager = package_manager(package_json)
+            for key in ("test", "build", "lint"):
+                if isinstance(scripts.get(key), str) and scripts[key].strip():
+                    proof[key] = package_script_command(manager, key)
+                    proof_sources[key] = f"package.json scripts.{key}"
+    except json.JSONDecodeError:
+        pass
+
+pyproject = target / "pyproject.toml"
+pyproject_text = pyproject.read_text(errors="ignore") if pyproject.exists() else ""
+if not proof["test"]:
+    if (target / "pytest.ini").exists() or "[tool.pytest" in pyproject_text:
+        proof["test"] = "python3 -m pytest"
+        proof_sources["test"] = "pytest config"
+if not proof["lint"]:
+    if (target / "ruff.toml").exists() or "[tool.ruff" in pyproject_text:
+        proof["lint"] = "python3 -m ruff check ."
+        proof_sources["lint"] = "ruff config"
+
+
+def update_config(path: Path) -> None:
+    lines = path.read_text().splitlines()
+    out = []
+    in_proof = False
+    for raw in lines:
+        stripped = raw.strip()
+        if raw.startswith("proof:"):
+            in_proof = True
+            out.append(raw)
+            continue
+        if in_proof and raw and not raw.startswith((" ", "\t")):
+            in_proof = False
+        if in_proof:
+            match = re.match(r"^(\s*)(test|build|lint):", raw)
+            if match:
+                key = match.group(2)
+                out.append(f"{match.group(1)}{key}: {json.dumps(proof[key])}")
+                continue
+        if stripped.startswith("trusted_actors:"):
+            trusted = [gh_user] if gh_user else []
+            out.append(f"trusted_actors: {json.dumps(trusted)}")
+            continue
+        out.append(raw)
+    path.write_text("\n".join(out) + "\n")
+
+
+update_config(tmp / "config.yaml")
+
+repo = {}
+if repo_json_raw:
+    try:
+        repo = json.loads(repo_json_raw)
+    except json.JSONDecodeError:
+        repo = {}
+
+instructions = []
+for rel in (
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "CONTRIBUTING.md",
+    ".github/copilot-instructions.md",
+):
+    if (target / rel).exists():
+        instructions.append(rel)
+
+default_branch = ""
+if isinstance(repo.get("defaultBranchRef"), dict):
+    default_branch = repo["defaultBranchRef"].get("name") or ""
+
+trusted_text = gh_user if gh_user else "(none discovered)"
+repo_name = repo.get("nameWithOwner") or "(not discovered)"
+visibility = repo.get("visibility") or "(not discovered)"
+permission = repo.get("viewerPermission") or "(not discovered)"
+issues_enabled = repo.get("hasIssuesEnabled")
+issues_text = str(issues_enabled).lower() if isinstance(issues_enabled, bool) else "(not discovered)"
+
+proof_lines = "\n".join(
+    f"  - {key}: {proof[key] or '(blank)'}"
+    + (f" ({proof_sources[key]})" if proof_sources[key] else "")
+    for key in ("test", "build", "lint")
+)
+instruction_lines = "\n".join(f"  - {item}" for item in instructions) or "  - (none discovered)"
+
+missing_proof = [key for key, value in proof.items() if not value]
+human_gates = ["Create required labels by running .agent-loops/setup-labels.sh."]
+if missing_proof:
+    human_gates.append(
+        "Fill missing proof commands before expecting autonomous convergence: "
+        + ", ".join(missing_proof)
+        + "."
+    )
+if not gh_user:
+    human_gates.append("Authenticate GitHub CLI if trusted_actors should include the operator.")
+
+human_gate_lines = "\n".join(f"  - {item}" for item in human_gates)
+
+report = f"""# Autonomous Work Loops Bootstrap Report
+
+- Host: GitHub
+- Target repo path: {target}
+- GitHub repo: {repo_name}
+- Default branch: {default_branch or '(not discovered)'}
+- Visibility: {visibility}
+- Viewer permission: {permission}
+- Issues enabled: {issues_text}
+- Authenticated GitHub user: {gh_user or '(not discovered)'}
+- GitHub auth status: {gh_status}
+- Trust posture: strict
+- Trusted actors: {trusted_text}
+- Required labels: not mutated; run `.agent-loops/setup-labels.sh`
+- Proof commands:
+{proof_lines}
+- Context:
+  - repo instructions:
+{instruction_lines}
+  - generated paths:
+    - `.agent-loops/config.yaml`
+    - `.agent-loops/context.md`
+    - `.agent-loops/runners/`
+    - `.agent-loops/playbooks/`
+    - `.agent-loops/evidence/inbox/`
+  - repo-specific rules: read discovered instruction files before every tick
+- Doctor: run `.agent-loops/doctor.sh` after labels exist and before arming the supervisor
+- First trial issue: `.agent-loops/FIRST-TRIAL-ISSUE.md`
+- Runner: local foreground supervisor at `.agent-loops/runners/local-supervisor.sh`
+  - shared guarded runner body: `.agent-loops/runners/guarded-role-runner-common.sh`
+- Credentials: runner uses local shell credentials; bootstrap did not install cron, launchd, Actions schedules, Codex Automations, or Claude `/loop`
+- Budgets: default V1 budgets retained in `.agent-loops/config.yaml`
+- Reviewer model: blank, meaning same-model adversarial review unless changed in config
+- Critical decisions:
+  - Existing `.agent-loops` is preserved unless bootstrap runs with `--force`.
+  - Strict trust is retained as the conservative default.
+  - Missing proof commands are left blank rather than guessed.
+  - GitHub labels are not created by bootstrap.
+- Human gates:
+{human_gate_lines}
+"""
+
+(tmp / "BOOTSTRAP-REPORT.md").write_text(report)
+PY
+
+chmod +x "$tmp/setup-labels.sh" "$tmp/doctor.sh" "$tmp/runners/"*.sh
+
+if [ -e "$dest" ]; then
+  rm -rf "$dest"
+fi
+mv "$tmp" "$dest"
+trap - EXIT
+
+printf 'bootstrapped %s\n' "$dest"
+printf 'next: run %s\n' "${dest}/setup-labels.sh"
+printf 'then: run %s\n' "${dest}/doctor.sh"

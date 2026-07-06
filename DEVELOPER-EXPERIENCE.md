@@ -10,46 +10,62 @@ brew install gh coreutils
 gh auth login
 gh auth status
 
-# 2. Get the skill into all three agent dirs (.agents canonical, .claude/.codex symlink to it)
-./skill/autonomous-work-loops/assets/install.sh   # or --symlink
+# 2. Install into all three agent skill dirs
+./skills/autonomous-work-loops/assets/install.sh   # or --symlink
 ```
 
 `gh` is the GitHub host adapter. `coreutils` provides `gtimeout` on macOS for the external cost wall. No daemon, no service, nothing running in the background yet.
 
+The installer backs up existing skill installs by default. Use `--force` only
+when replacing them without a backup is intentional.
+
 ## Per-repo setup: one bootstrap, ~1 minute
 
-In the target repo, invoke the skill in bootstrap mode:
+In the target repo, run deterministic bootstrap:
+
+```sh
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
+```
+
+Or invoke the skill in bootstrap mode when you want agent-guided setup:
 
 ```
 /autonomous-work-loops          # or just: "set up autonomous work loops here"
 ```
 
 What it does, unattended:
-- Discovers host (GitHub), default branch, authenticated `gh` login, **visibility → trust posture**, explicit loop dispatchers → `trusted_actors`, and crucially **your proof command** (it found `pytest` / would find `npm test` / etc.).
-- Renders `.agent-loops/` into your repo: `config.yaml`, three playbooks, an evidence inbox, and **ready-to-run Codex runner scripts** for each role.
+- Discovers host (GitHub), default branch, authenticated `gh` login, and crucially **your proof command** (it found `pytest` / would find `npm test` / etc.). Deterministic bootstrap keeps `trust_posture: strict` as the conservative default.
+- Renders `.agent-loops/` into your repo: `config.yaml`, `context.md`, `setup-labels.sh`, `doctor.sh`, a first-trial issue template, three playbooks, an evidence inbox, the foreground supervisor, and guarded local role engines for Codex or Claude.
 - Writes a **Bootstrap Report** stating exactly what it detected and what's left for you to decide.
 
 What you see afterward (`.agent-loops/`):
 ```
 config.yaml                     # the durable contract: proof cmd, trust, labels, budgets
+context.md                      # small repo context every tick reads before acting
+setup-labels.sh                 # idempotent required-label setup helper
+doctor.sh                       # non-mutating setup preflight
+FIRST-TRIAL-ISSUE.md            # safe smoke-test issue body
 playbooks/{implementer,reviewer,fixer}.md
-runners/{implementer,reviewer,fixer}.sh   # each wraps `codex exec` in a gtimeout wall
+runners/local-supervisor.sh     # the only V1 runner surface
+runners/{codex,claude}.sh       # guarded local role engines behind the supervisor
+runners/guarded-role-runner-common.sh
 evidence/inbox/
 BOOTSTRAP-REPORT.md
 ```
 
-You review the Bootstrap Report's **Critical Decisions** (trust posture, trusted actors, proof command, credential boundary) and edit `config.yaml` if needed. In strict mode, bootstrap should add the authenticated maintainer/operator to `trusted_actors` when it can prove the login with `gh api user`; it should not add every collaborator. Then create the 7 labels with the `gh label create --force` commands from the report.
+You review the Bootstrap Report's **Critical Decisions** (trust posture, trusted actors, proof command, credential boundary) and edit `config.yaml` if needed. In strict mode, bootstrap should add the authenticated maintainer/operator to `trusted_actors` when it can prove the login with `gh api user`; it should not add every collaborator. Then create or refresh the 7 labels and run the preflight:
+
+```sh
+.agent-loops/setup-labels.sh
+.agent-loops/doctor.sh
+```
 
 ## Operating: the daily loop
 
 ### The only thing you do
 Open an issue, write what you want (clearly — the issue body *is* the implementer's brief), and apply the **`ready`** label. In strict mode, the issue must be authored by someone in `trusted_actors`; if the idea came from an external issue, create a trusted-authored dispatch issue that summarizes the accepted work and links the source.
 
-For V1, bootstrap should help you arm one runner surface. The skill does not install cron jobs or create GitHub Actions workflows. It should choose the product-native path when it can:
-
-- Codex user: Codex Automations.
-- Claude user: Claude `/loop`.
-- Unknown or generic local user: local foreground supervisor.
+For V1, bootstrap gives everyone the same product path: start one local foreground supervisor in a visible terminal.
 
 Manual guarded tick commands still exist for troubleshooting, but they are not the happy path.
 
@@ -70,18 +86,22 @@ Under the hood, each tick reconstructs state from GitHub labels and marker comme
 
 Every step leaves a machine-readable marker comment on the PR (`<!-- loop:reviewer v=1 reviewed_sha=... verdict=... -->`) so the next tick — and you — can see exactly what happened and why.
 
-### Runner surfaces
-The shippable V1 path should set up one runner surface that keeps checking for work after bootstrap. It ships runner templates and validates the guarded Codex runner, but actual system-cron install/uninstall is not a V1 claim.
+### Runner surface
+The shippable V1 path has one runner surface: the local foreground supervisor. Start it once and leave it visible:
 
-Current scheduler posture:
-- **Codex Automations**: V1 Codex happy path. Use project/worktree automation to wake implementer, reviewer, and fixer ticks on a cadence.
-- **Claude `/loop`**: V1 Claude happy path. Create one recurring loop prompt per role.
-- **Local foreground supervisor**: V1 generic fallback. User starts one terminal process; it cycles implementer, reviewer, and fixer until stopped.
-- **Manual guarded Codex ticks**: debugging and validation path.
-- **Actual system cron**: out of V1. It needs install, update, uninstall, environment, log, overlap, and cleanup behavior before support is claimed.
-- **GitHub Actions schedule**: out of V1. Treat hosted CI/bot orchestration as a separate product surface unless a later design explicitly adopts it.
+```sh
+.agent-loops/runners/local-supervisor.sh "$PWD"
+```
 
-The honest V1 promise is: bootstrap the repo, arm one V1 runner surface, label trusted work, and get a proven PR or a clear human-gated terminal state.
+The supervisor auto-detects `.agent-loops/runners/codex.sh` when Codex CLI is available, otherwise `.agent-loops/runners/claude.sh` when Claude Code is available. Set `AWL_ROLE_RUNNER` when you want an explicit guarded role engine:
+
+```sh
+AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh "$PWD"
+```
+
+Manual guarded ticks are debugging and validation paths. Codex Automations, Claude `/loop`, actual system cron, launchd, and GitHub Actions schedules are out of V1.
+
+The honest V1 promise is: bootstrap the repo, run `.agent-loops/setup-labels.sh`, start the foreground supervisor, label trusted work, and get a proven PR or a clear human-gated terminal state.
 
 ### Your endgame
 You come back to a PR labeled `ready-for-human` that is **proven (tests ran and passed) and converged (survived adversarial review; review→fix cycles ran only if real defects were found)**. You read the diff, you merge. If something couldn't converge, you instead see `did-not-converge`, `unproven`, or `stalled` — distinct labels that tell you precisely why it needs you, rather than a false "ready."
@@ -91,7 +111,7 @@ You come back to a PR labeled `ready-for-human` that is **proven (tests ran and 
 - **It writes its own tests.** Given an issue that said "prove it with pytest," the implementer authored 3 new tests, not just the feature.
 - **Proof is the real gate, not ceremony.** The first build had the reviewer force a fix cycle even on a clean PR; watching the fixer change nothing taught us that forced motion ≠ rigor. The honest value is: the tests actually ran and passed, and an adversarial (ideally cross-model) reviewer read the diff — convergence is earned by proof, not by counting rounds.
 - **It's resilient to environment friction.** When codex's sandbox blocked `.git` writes, the agent self-healed by working from a temp clone and logged it as evidence — no human intervention.
-- **Codex sandbox + browser tests don't mix** on a policy-locked machine. If your proof is Playwright/Chromium, run the loop via Claude or in CI, not codex-in-sandbox. Unit/build proofs are perfect for codex.
+- **Codex sandbox + browser tests don't mix** on a policy-locked machine. If your proof is Playwright/Chromium, use a compatible guarded role engine or a non-sandboxed future surface. Unit/build proofs are perfect for codex.
 
 ## The mental model
 

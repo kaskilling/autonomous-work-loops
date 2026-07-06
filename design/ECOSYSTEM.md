@@ -7,9 +7,9 @@ How `autonomous-work-loops` is used, where it lives, and how it is distributed.
 Per ADR-0001, this is **not a daemon and not a slash command that runs forever**. It is a skill with two modes:
 
 - **Bootstrap mode** — invoked once per repo (`/autonomous-work-loops` or "set up work loops here"). Discovers the repo, renders `.agent-loops/`, emits runner artifacts, writes a Bootstrap Report.
-- **Tick mode** — invoked by an *external dumb scheduler*, one role per invocation (`implementer` | `reviewer` | `fixer`). One tick = claim one item, do one unit of work, exit. Stateless between ticks.
+- **Tick mode** — invoked by the local foreground supervisor or a manual guarded tick, one role per invocation (`implementer` | `reviewer` | `fixer`). One tick = claim one item, do one unit of work, exit. Stateless between ticks.
 
-The skill never loops by itself. The *loop* is the scheduler re-invoking tick mode. This is the single most important ecosystem fact: **we ship the brain (the skill) and a recipe for the heartbeat (the runner), not the heartbeat itself.**
+The skill never loops by itself. The *loop* is the foreground supervisor re-invoking tick mode. This is the single most important ecosystem fact: **we ship the brain (the skill) and a visible local heartbeat (the runner), not a daemon.**
 
 ## 2. Prior art and differentiation
 
@@ -21,7 +21,7 @@ The official `claude-plugins-official` marketplace already ships **`ralph-loop`*
 |---|---|---|
 | Roles | one | three (implementer / reviewer / fixer) |
 | State | in-session memory | host state (labels + SHA markers), zero agent memory |
-| Persistence | dies with session | survives via external scheduler; resumable |
+| Persistence | dies with session | survives via host state and foreground re-ticks; resumable |
 | Convergence | completion promise | adversarial review + proof + cycle cap (ADR-0003/0010) |
 | Safety | none specific | trust-gated intake, proof precondition, human gates, budget walls |
 | Multi-machine | no | claim atomicity via branch-ref push (ADR-0008) |
@@ -36,7 +36,7 @@ This machine has three skill directories, and the convention is **`~/.agents/ski
 - `~/.claude/skills/<skill>` → `~/.agents/skills/<skill>` (Claude Code)
 - `~/.codex/skills/<skill>` → `~/.agents/skills/<skill>` (Codex CLI)
 
-(For repos that own a skill, the canonical entry may instead symlink to the repo, e.g. `autonomous-work-loops` → its repo's `skill/` dir, and `maestro-android-cli` → a project repo.)
+(For repos that own a skill, the canonical entry may instead symlink to the repo, e.g. `autonomous-work-loops` -> its repo's `skills/autonomous-work-loops/` dir, and `maestro-android-cli` -> a project repo.)
 
 Implication: install by placing the real skill once (in its repo or `.agents`) and symlinking it into all three dirs — `install.sh` does the copy variant for portability to machines without this convention. The skill must be **tool-agnostic in its content** (it already is per ADR-0001 model-agnosticism); the body must not assume "you are Claude" — it speaks in roles and host operations.
 

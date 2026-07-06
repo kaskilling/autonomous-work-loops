@@ -35,6 +35,11 @@ requires changing them:
 
 Implementation PRs should not include generated evidence logs.
 
+Useful setup helpers:
+
+- `.agent-loops/doctor.sh` checks local setup before the supervisor runs.
+- `.agent-loops/FIRST-TRIAL-ISSUE.md` is a safe smoke-test issue body.
+
 ## Role Context
 
 Implementer:

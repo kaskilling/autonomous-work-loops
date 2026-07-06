@@ -47,7 +47,7 @@ These are properties of running ticks inside codex's managed sandbox on this mac
 
 ## Eval matrix status
 
-Only the **baseline variant** (same-model review, pytest proof, permissive trust, manual-sequential ticks) was run to convergence in this first live run. Later guarded-runner results supersede the open safety matrix items; see `build/GATE-RESULTS.md`. The remaining scheduler claim is V1 runner cadence, not actual system cron.
+Only the **baseline variant** (same-model review, pytest proof, permissive trust, manual-sequential ticks) was run to convergence in this first live run. Later guarded-runner results supersede the open safety matrix items; see `build/GATE-RESULTS.md`. The remaining runner claim is foreground supervisor cadence, not actual system cron.
 
 ## Best-setup verdict (provisional)
 

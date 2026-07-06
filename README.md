@@ -1,18 +1,27 @@
 # autonomous-work-loops
 
-A portable agent **skill** that turns a repo into a reviewed, converging, multi-agent PR workflow. V1 has one supported runner surface: the **local foreground supervisor**. Strict trust, allowlisted dispatch, proof honesty, no-proof routing, duplicate claims, stale recovery, cost-wall recovery, cycle caps, cadence, planted-defect review routing, and the foreground supervisor have live fixture evidence.
+Turn trusted GitHub issues into proven, reviewed PRs.
 
-Tag an issue `ready`. An **Implementer** claims it, writes the change on an isolated branch, proves it, and opens a PR. A **Reviewer** adversarially reviews it. If defects are found, a **Fixer** addresses the feedback and the reviewer re-checks the new head. When proof passes and no blocking defects remain, the PR is labeled `ready-for-human` for you to merge. No human in the loop until the end.
+**Status:** ready for private development and targeted validation. Do not treat
+this as broad public-launch ready until a fresh-install smoke and each packaging
+install path pass from a clean agent home.
 
-It is **not a daemon**. It's a bootstrapper plus a stateless single-tick executor: the foreground supervisor re-invokes one role per tick, and all state lives on the host (labels + commit-stamped marker comments), never in agent memory.
+You write a clear issue and add the `ready` label. A local supervisor runs three
+agent roles:
 
-## How it differs from `ralph-loop`
+1. **Implementer** claims the issue, writes the change, runs proof, and opens a PR.
+2. **Reviewer** checks the proof, diff, and acceptance criteria.
+3. **Fixer** handles blocking review feedback when needed.
 
-`ralph-loop` feeds one prompt back to one agent until a promise is true. `autonomous-work-loops` runs **three coordinated roles** with host-state-driven convergence, adversarial proof-anchored review, trust-gated work intake, atomic multi-machine claiming, and enforced cost walls. Single-agent retry vs. a multi-agent reviewed pipeline.
+When proof passes and review has no blocking findings, the PR is labeled
+`ready-for-human`. You still review and merge it yourself.
 
-## Install
+V1 is local and GitHub-only. It is not a hosted bot, daemon, cron job, GitHub
+Action, Codex Automation, or Claude `/loop` scheduler.
 
-Prerequisites for a target repo:
+## Five-Minute Setup
+
+Install machine prerequisites:
 
 ```sh
 brew install gh coreutils
@@ -20,61 +29,152 @@ gh auth login
 gh auth status
 ```
 
-`gh` is required because V1 uses GitHub issues, PRs, labels, and comments as the host state. `coreutils` provides `gtimeout` on macOS for the guarded runner's external wall.
+Install this skill:
 
 ```sh
-# clone, then install into all three skill dirs (.claude, .codex, .agents)
-./skill/autonomous-work-loops/assets/install.sh            # copy
-./skill/autonomous-work-loops/assets/install.sh --symlink  # or symlink one clone
+git clone https://github.com/kaskilling/autonomous-work-loops.git
+cd autonomous-work-loops
+./skills/autonomous-work-loops/assets/install.sh --symlink
 ```
 
-Claude Code users can also install it as a plugin (see [PUBLISHING.md](PUBLISHING.md)).
+Existing installs are moved aside to a timestamped backup by default. Use
+`--force` only when you intentionally want to replace without a backup.
 
-## Use
+Bootstrap the GitHub repo you want agents to work on:
 
+```sh
+cd /path/to/target-repo
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
 ```
-# 1. Bootstrap once per repo
-/autonomous-work-loops          # or: "set up autonomous work loops here"
-# -> discovers host/proof/trust/current gh user, renders .agent-loops/, emits runners, writes a Bootstrap Report
 
-# 2. Start the only V1 runner surface
+If you prefer agent-guided setup, ask Codex or Claude from the target repo:
+
+```text
+/autonomous-work-loops
+```
+
+or:
+
+```text
+Set up autonomous work loops here.
+```
+
+Then run the generated setup checks:
+
+```sh
+.agent-loops/setup-labels.sh
+.agent-loops/doctor.sh
+```
+
+Start the local supervisor and leave the terminal open:
+
+```sh
 .agent-loops/runners/local-supervisor.sh "$PWD"
 ```
 
-V1's happy path is the local foreground supervisor. It works the same way from Codex, Claude, or another local harness because scheduler behavior is no longer delegated to app-specific automation features. Manual guarded tick commands remain available for troubleshooting, but they are not the intended happy path. Codex Automations, Claude `/loop`, system cron, and GitHub Actions schedules are out of V1 scope.
+Create a GitHub issue from `.agent-loops/FIRST-TRIAL-ISSUE.md`, then add the
+`ready` label. Watch the issue and PR labels move.
 
-Bootstrap renders `.agent-loops/setup-labels.sh` so label setup is one idempotent command when labels are missing.
+## What You Need To Decide
 
-For step-by-step setup and first-trial instructions, see [V1-QUICKSTART.md](V1-QUICKSTART.md).
+Bootstrap tries to detect the defaults, but you should confirm these before
+starting the supervisor:
 
-## Safety (read before pointing it at a credentialed repo)
+| Decision | Default to use first |
+|---|---|
+| Target repo | A small GitHub repo with issues and PRs enabled |
+| Proof command | Existing test/build/lint command, for example `npm test` or `python3 -m pytest -q` |
+| Trusted actors | Your authenticated GitHub username |
+| Runner | Codex CLI if available, otherwise Claude Code |
+| Supervisor cadence | The generated default interval |
 
-- **Trust-gated intake**: only trusted actors' `ready` issues should be picked up (posture inferred from repo visibility; editable `trusted_actors`). In strict mode, the issue author must be in `trusted_actors`; external requests need a trusted maintainer to create a dispatch issue and label that issue `ready`. Current status: strict untrusted-author rejection and allowlisted dispatch acceptance both pass; the guarded Codex runner keeps Git mutation outside nested Codex so `.git` sandbox protection no longer blocks claim.
-- **Proof is a precondition**: no test/build/lint command → work is labeled `unproven` and handed to a human; it never auto-converges.
-- **Bounded context**: every tick starts from repo root, reads `.agent-loops/config.yaml` plus `.agent-loops/context.md`, then inspects only the issue/PR, proof logs, diffs, and relevant repo docs.
-- **Human gates**: merge, deploy, secrets, protected paths, budget increases, and playbook changes always stop for a human.
-- **Cost walls**: every tick runs under an external `timeout`; runaway cycles cap out and escalate.
+If there is no proof command, the loop must stop at `unproven`. Passing proof is
+the main safety gate.
 
-## Repo layout
+## Label Control Panel
 
-- `skill/autonomous-work-loops/` — the shippable skill (SKILL.md + references + assets)
-- `design/` — the source of truth: `adr/` (10 decisions), `CONTEXT.md` (glossary), `ECOSYSTEM.md`, `PLAN-v2-target.md`
-- `build/` — the build plan codex executed, its build report, and the post-build evaluation
-
-## Status
-
-V1 is implemented and baseline-tested end-to-end on live private GitHub repos with Codex (`ttl-cache-loop-test`; see `build/TEST-RESULTS.md`, and `awl-gate`; see `build/GATE-RESULTS.md`). The current Codex runner is guarded: shell owns Git/GitHub mutation and nested Codex edits the working tree only. That fixes the managed-sandbox `.git` write denial that blocked the earlier generated runner.
-
-| Capability | Status | Notes |
+| Label | Meaning | What you do |
 |---|---|---|
-| GitHub bootstrap and single-tick Implementer/Reviewer/Fixer loops | **Implemented** | Shipped in `skill/autonomous-work-loops/`. |
-| Live Codex baseline on a private GitHub repo with pytest proof | **Tested once** | Passed in `build/TEST-RESULTS.md`. |
-| Strict-trust rejection | **Retest PASS** | T2/T3/T4 passed under author-only semantics; see `build/GATE-RESULTS.md`. |
-| Strict dispatch acceptance | **PASS** | T5 issue `#9` converged to PR `#10`; guarded runner issue `#11` converged to PR `#12`. |
-| Failed-proof routing | **Smoke-tested PASS** | Red proof routed to `needs-fix`; see `build/GATE-RESULTS.md`. |
-| No-proof, proof honesty, duplicate-claim, stale-claim, and reviewer idempotency | **Guarded-runner PASS** | T7/T8/T10/T11/T12 passed on live GitHub; see `build/GATE-RESULTS.md`. |
-| Cost wall, cycle-cap, foreground cadence, and planted-defect model comparison | **Guarded-runner PASS** | Cost wall reached `stalled`; cycle cap reached `did-not-converge`; foreground-style cadence converged and no-opped; default and `gpt-5.4` reviewers caught the planted defect. |
-| Browser/Playwright proof under Codex sandbox | **Known environment constraint** | Use CI or another runner when local Codex sandbox cannot run browser proof. |
-| Local foreground supervisor as V1 runner surface | **V1 GO** | Fresh fixture `awl-v1-local-supervisor` issue `#1` / PR `#2` reached `ready-for-human`; restart no-opped with one branch and one PR. |
-| App-native schedulers | **Removed from V1** | Codex Automations and Claude `/loop` are no longer V1 setup paths; they can return later only after independent live validation. |
-| Maintainer Loop, Core Memory, `loopctl`, evidence consolidation, multi-host adapters | **Designed for V2** | Preserved in `design/PLAN-v2-target.md`; not active in V1. |
+| `ready` | Trusted issue is available for the loop | You apply this |
+| `in-progress` | The loop claimed the issue or PR | Wait or inspect |
+| `needs-fix` | Review or proof found a blocker | Wait or inspect |
+| `ready-for-human` | Proof and autonomous review converged | Review and merge |
+| `unproven` | No accepted proof command is configured | Fix setup or handle manually |
+| `did-not-converge` | Review/fix cycle cap was reached | Human review needed |
+| `stalled` | Runtime or retry wall was reached | Inspect logs and runner state |
+
+Typical paths:
+
+```text
+clean path: ready -> in-progress -> ready-for-human
+fix path:   ready -> in-progress -> needs-fix -> in-progress -> ready-for-human
+stop path:  ready -> in-progress -> unproven | did-not-converge | stalled
+```
+
+## Safety Defaults
+
+- Only trusted `ready` issues are executable. In strict mode, the issue author
+  must be listed in `.agent-loops/config.yaml` under `trusted_actors`.
+- External requests should become trusted-authored dispatch issues before they
+  receive `ready`.
+- Proof is required for autonomous convergence.
+- Merge, deploy, secrets, protected paths, budget increases, and playbook changes
+  stay human-gated.
+- The local supervisor uses your local credentials. Do not run it in a repo you
+  would not trust with those credentials.
+
+## Generated Files
+
+Bootstrap writes `.agent-loops/` into the target repo:
+
+```text
+.agent-loops/
+  config.yaml                  # proof commands, trust, labels, budgets
+  context.md                   # short repo contract every role reads
+  setup-labels.sh              # idempotent GitHub label setup
+  doctor.sh                    # non-mutating preflight checker
+  FIRST-TRIAL-ISSUE.md         # safe first smoke-test issue body
+  runners/local-supervisor.sh  # only supported V1 runner surface
+  runners/codex.sh             # guarded Codex role runner when available
+  runners/claude.sh            # guarded Claude role runner when available
+  runners/guarded-role-runner-common.sh
+  playbooks/                   # role instructions
+  evidence/inbox/              # future-compatible evidence inbox
+```
+
+## Install And Packaging
+
+The plain install script copies or symlinks the skill into:
+
+- `~/.claude/skills`
+- `~/.codex/skills`
+- `~/.agents/skills`
+
+This repo also includes:
+
+- `.claude-plugin/plugin.json` for Claude Code plugin packaging.
+- `.codex-plugin/plugin.json` for Codex plugin packaging.
+- `skills/autonomous-work-loops/agents/openai.yaml` for Codex skill UI metadata.
+- `skills/autonomous-work-loops` is the canonical skill tree used by both
+  direct skill installs and plugin packaging.
+
+For publishing notes, see [PUBLISHING.md](PUBLISHING.md).
+
+## Where To Read More
+
+- [V1-QUICKSTART.md](V1-QUICKSTART.md) gives the operator setup path in more detail.
+- [DEVELOPER-EXPERIENCE.md](DEVELOPER-EXPERIENCE.md) shows what the daily loop feels like.
+- [design/](design/) contains the ADRs, glossary, ecosystem notes, and V2 target design.
+- [build/](build/) contains build plans, test results, and gate evidence.
+
+## Current Status
+
+V1 is implemented and baseline-tested on live private GitHub repos with Codex.
+The current happy path is the local foreground supervisor:
+
+```sh
+.agent-loops/runners/local-supervisor.sh "$PWD"
+```
+
+Known constraint: browser or Playwright proof can fail under locked local Codex
+sandboxes. Use a compatible runner or CI for that class of proof.

@@ -1,12 +1,9 @@
-#!/usr/bin/env bash
-# Usage after rendering:
-#   .agent-loops/runners/codex.sh
-# Or explicitly:
-#   .agent-loops/runners/codex.sh <repo_path> <role> [model]
+# Shared guarded role runner body.
 #
-# Managed Codex sandboxes can edit workspace files but may not write .git.
-# This runner keeps GitHub/Git mutation in the parent shell and uses nested
-# Codex only for workspace edits or review text.
+# This file is sourced by codex.sh and claude.sh after they define
+# run_nested_agent <sandbox_mode> <prompt> <log>. The shared body keeps
+# GitHub/Git mutation, trust checks, proof, labels, PRs, and marker comments
+# in one place so the two agent-specific wrappers cannot drift.
 set -euo pipefail
 
 repo="${1:-}"
@@ -377,11 +374,7 @@ After that, provide concise findings. Use blocking only for defects that should 
   prompt_log="${review_log%.log}-prompt.log"
   printf '%s\n' "$prompt" >"$prompt_log"
   set +e
-  if [ -n "$model" ]; then
-    wall codex exec --cd "$repo" -s read-only -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$review_log" 2>&1
-  else
-    wall codex exec --cd "$repo" -s read-only -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" </dev/null >"$review_log" 2>&1
-  fi
+  run_nested_agent read-only "$prompt" "$review_log"
   local rc=$?
   if [ "$rc" -ne 0 ]; then
     return "$rc"
@@ -475,11 +468,7 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     prompt_log="${log%.log}-prompt.log"
     printf '%s\n' "$prompt" >"$prompt_log"
     set +e
-    if [ -n "$model" ]; then
-      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$log" 2>&1
-    else
-      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" </dev/null >"$log" 2>&1
-    fi
+    run_nested_agent workspace-write "$prompt" "$log"
     local codex_rc=$?
     set -e
     if [ "$codex_rc" -ne 0 ]; then
@@ -540,6 +529,10 @@ reviewer() {
   repo_slug="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
   while IFS=$'\t' read -r pr branch labels; do
     [ -n "$pr" ] || continue
+    case "$branch" in
+      "$branch_prefix"*) ;;
+      *) continue ;;
+    esac
     case ",$labels," in
       *",$label_ready_for_human,"*|*",$label_needs_fix,"*|*",$label_unproven,"*) continue ;;
     esac
@@ -612,7 +605,7 @@ reviewer() {
       fi
     fi
     return 0
-  done < <(gh pr list --repo "$repo_slug" --state open --json number,headRefName,labels --jq '.[] | select(.headRefName | startswith("loop/impl/issue-")) | [.number, .headRefName, ([.labels[].name] | join(","))] | @tsv')
+  done < <(gh pr list --repo "$repo_slug" --state open --json number,headRefName,labels --jq '.[] | [.number, .headRefName, ([.labels[].name] | join(","))] | @tsv')
   echo "no reviewable loop PR"
 }
 
@@ -621,6 +614,10 @@ fixer() {
   repo_slug="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
   while IFS=$'\t' read -r pr branch labels; do
     [ -n "$pr" ] || continue
+    case "$branch" in
+      "$branch_prefix"*) ;;
+      *) continue ;;
+    esac
     case ",$labels," in
       *",$label_needs_fix,"*) ;;
       *) continue ;;
@@ -661,11 +658,7 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     prompt_log="${log%.log}-prompt.log"
     printf '%s\n' "$prompt" >"$prompt_log"
     set +e
-    if [ -n "$model" ]; then
-      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true -c "model=\"$model\"" "$prompt" </dev/null >"$log" 2>&1
-    else
-      wall codex exec --cd "$repo" -s workspace-write -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "$prompt" </dev/null >"$log" 2>&1
-    fi
+    run_nested_agent workspace-write "$prompt" "$log"
     local codex_rc=$?
     set -e
     if [ "$codex_rc" -ne 0 ]; then
@@ -709,7 +702,7 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
       fi
     fi
     return 0
-  done < <(gh pr list --repo "$repo_slug" --state open --json number,headRefName,labels --jq '.[] | select(.headRefName | startswith("loop/impl/issue-")) | [.number, .headRefName, ([.labels[].name] | join(","))] | @tsv')
+  done < <(gh pr list --repo "$repo_slug" --state open --json number,headRefName,labels --jq '.[] | [.number, .headRefName, ([.labels[].name] | join(","))] | @tsv')
   echo "no fixable loop PR"
 }
 

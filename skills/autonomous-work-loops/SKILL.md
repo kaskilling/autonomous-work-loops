@@ -18,6 +18,14 @@ Use **Bootstrap mode** when the user asks to set up, install, initialize, bootst
 3. `references/safety.md`
 4. `references/budgets.md`
 
+Default to the deterministic bootstrap script when possible:
+
+```sh
+<skill-root>/assets/bootstrap.sh "$PWD"
+```
+
+Use agent-rendered bootstrap only when the script is unavailable or the user explicitly wants a guided setup.
+
 Use **Tick mode** when the user or runner gives a role: `implementer`, `reviewer`, or `fixer`. Always reconstruct state from the host and `.agent-loops/` before acting. Read:
 
 1. `references/adapter-github.md`

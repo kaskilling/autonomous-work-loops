@@ -1,93 +1,191 @@
 # V1 Quickstart
 
-V1 turns GitHub issues labeled `ready` into proven PRs by running one local foreground supervisor. You create trusted issues; the supervisor wakes the Implementer, Reviewer, and Fixer ticks until the PR reaches `ready-for-human` or a human-gated terminal state.
+V1 runs one local foreground supervisor. It watches trusted GitHub issues labeled
+`ready`, opens proven PRs, reviews them, fixes blockers when needed, and stops at
+`ready-for-human` for your final review.
 
-## Current V1 Flow
+## The Short Path
 
-1. Install the skill.
-2. Bootstrap a target GitHub repo.
-3. Confirm the Bootstrap Report: proof command, trusted actors, labels, and local runner.
-4. Start the foreground supervisor in one terminal.
-5. Create or rewrite a trusted issue and apply `ready`.
-6. Watch GitHub labels and PR markers:
-   - clean path: `ready -> in-progress -> ready-for-human`
-   - fix path: `ready -> in-progress -> needs-fix -> in-progress -> ready-for-human`
-   - human gates: `unproven`, `did-not-converge`, or `stalled`
-7. Human reviews and merges the `ready-for-human` PR.
+1. Install prerequisites.
+2. Install the skill.
+3. Bootstrap one target GitHub repo.
+4. Create labels.
+5. Run the doctor check.
+6. Start the supervisor.
+7. Create one tiny trusted issue and add `ready`.
+8. Review the resulting PR when it reaches `ready-for-human`.
 
-## Prerequisites
+## 1. Install Prerequisites
 
-- A GitHub repo with issues and pull requests enabled.
-- A working `git` remote and authenticated GitHub CLI:
+You need a GitHub repo with issues and pull requests enabled, plus a local proof
+command such as `npm test`, `pnpm test`, `python3 -m pytest -q`, or a build
+command.
+
+On macOS:
 
 ```sh
-brew install gh
+brew install gh coreutils
 gh auth login
 gh auth status
 ```
 
-- A proof command that can run locally, such as `python3 -m pytest -q`, `npm test`, or a repo-specific build/test command.
-- Codex CLI or Claude Code installed with access to this skill.
-- For Codex guarded runner use on macOS, `gtimeout` is recommended:
+`gh` is required. `coreutils` provides `gtimeout`, which gives the local runner a
+stronger runtime wall on macOS.
 
-```sh
-brew install coreutils
-```
+Also install Codex CLI or Claude Code. The supervisor auto-detects the available
+guarded role runner.
 
-## Install The Skill
+## 2. Install The Skill
 
 ```sh
 git clone https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
-./skill/autonomous-work-loops/assets/install.sh --symlink
+./skills/autonomous-work-loops/assets/install.sh --symlink
 ```
 
-## Bootstrap A Repo
+Use `--symlink` while developing or evaluating the skill. Use the default copy
+mode when you want a fixed local copy. Existing installs are moved aside to a
+timestamped backup by default; use `--force` only when you intentionally want to
+replace without a backup.
 
-In the target repo:
+## 3. Bootstrap The Target Repo
+
+Go to the GitHub repo where agents should work:
+
+```sh
+cd /path/to/target-repo
+```
+
+Run deterministic bootstrap:
+
+```sh
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
+```
+
+Or invoke the skill in Codex or Claude for agent-guided setup:
 
 ```text
 /autonomous-work-loops
 ```
 
-Or ask:
+or:
 
 ```text
 Set up autonomous work loops here.
 ```
 
-Bootstrap should render `.agent-loops/`, write a Bootstrap Report, identify the authenticated GitHub user, add that user to `trusted_actors` when appropriate, and render the foreground supervisor plus the guarded role runner for the local harness.
+Both paths write `.agent-loops/` and a Bootstrap Report. Read the report before
+starting the supervisor. The script refuses to overwrite an existing
+`.agent-loops/` unless you pass `--force`, and it refuses non-GitHub or non-git
+targets unless you pass `--allow-incomplete` for manual scaffolding.
 
-Review the Bootstrap Report before arming a runner. In strict mode, the issue author must be listed in `.agent-loops/config.yaml` under `trusted_actors`; the bootstrap default should include the authenticated maintainer/operator, not every collaborator.
+Confirm these fields in `.agent-loops/config.yaml`:
 
-Also review `.agent-loops/context.md`. It is the small context contract every Implementer, Reviewer, and Fixer tick reads before acting. Add repo-specific rules there when they matter, but keep it short and point to existing docs instead of pasting large code or directory listings.
+- `proof`: at least one accepted test, build, or lint command.
+- `trusted_actors`: includes the GitHub user who will author executable issues.
+- `trust_posture`: use `strict` for public or multi-contributor repos.
+- `labels`: keep defaults unless the repo already has a deliberate label scheme.
 
-## Start The Foreground Supervisor
+## 4. Create Labels
 
-Use this for V1. It is the only supported runner surface.
+Run the generated helper:
 
-Expected bootstrap output:
+```sh
+.agent-loops/setup-labels.sh
+```
+
+The helper is idempotent. It creates or updates:
+
+| Label | Meaning |
+|---|---|
+| `ready` | Trusted work is available |
+| `in-progress` | The loop claimed the work |
+| `needs-fix` | Proof or review found a blocker |
+| `ready-for-human` | Proof and review converged |
+| `unproven` | No accepted proof command exists |
+| `did-not-converge` | Review/fix cycle cap was reached |
+| `stalled` | Runtime or retry wall was reached |
+
+## 5. Run Doctor
+
+Run the non-mutating preflight:
+
+```sh
+.agent-loops/doctor.sh
+```
+
+Fix every `fail:` line before starting the supervisor. `warn:` lines are usually
+safe for a trial, but the `timeout`/`gtimeout` warning is worth fixing on macOS:
+
+```sh
+brew install coreutils
+```
+
+## 6. Start The Supervisor
+
+Start this in one visible terminal and leave it running:
 
 ```sh
 .agent-loops/runners/local-supervisor.sh "$PWD"
 ```
 
-Start it in one terminal and leave it running. Stop it with `Ctrl-C`. It does not install cron, launchd, GitHub Actions, or any persistent scheduler.
+Stop it with `Ctrl-C`.
 
-The supervisor auto-detects the local guarded role runner:
+The supervisor runs the roles in order:
 
-- Codex users: `.agent-loops/runners/codex.sh`
-- Claude users: `.agent-loops/runners/claude.sh`
+```text
+implementer -> reviewer -> fixer
+```
 
-Override detection when needed:
+It sleeps between ticks. Override the interval only when you are deliberately
+testing cadence:
+
+```sh
+AWL_SUPERVISOR_INTERVAL_SECONDS=60 .agent-loops/runners/local-supervisor.sh "$PWD"
+```
+
+Override the role runner only when auto-detection is wrong:
 
 ```sh
 AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh "$PWD"
 ```
 
-V1 does not use Codex Automations, Claude `/loop`, system cron, launchd, or GitHub Actions schedules.
+## 7. Run The First Trial
 
-## Manual Debug Commands
+Use the generated issue body:
+
+```sh
+cat .agent-loops/FIRST-TRIAL-ISSUE.md
+```
+
+Create a GitHub issue from that template as a trusted actor, then apply `ready`.
+
+Expected clean path:
+
+```text
+ready -> in-progress -> ready-for-human
+```
+
+Expected fix path:
+
+```text
+ready -> in-progress -> needs-fix -> in-progress -> ready-for-human
+```
+
+Stop paths:
+
+```text
+unproven | did-not-converge | stalled
+```
+
+After the trial, confirm:
+
+- Exactly one `loop/impl/issue-<number>` branch was created.
+- Exactly one PR was opened for the issue.
+- The PR body or comments include proof markers.
+- `.agent-loops/evidence/` logs are not in the PR diff.
+
+## Manual Debug Ticks
 
 Manual ticks are for troubleshooting, not the happy path:
 
@@ -101,44 +199,15 @@ Manual ticks are for troubleshooting, not the happy path:
 .agent-loops/runners/claude.sh "$PWD" fixer
 ```
 
-## First Manual Trial
+Use these when `doctor.sh` passes but the supervisor output does not explain the
+blocker.
 
-Use a small repo with a fast proof command.
+## What V1 Does Not Do
 
-1. Bootstrap the repo.
-2. Start `.agent-loops/runners/local-supervisor.sh "$PWD"` in one terminal.
-3. Create the labels if the Bootstrap Report asks for them:
-
-```sh
-.agent-loops/setup-labels.sh
-```
-
-Equivalent direct commands:
-
-```sh
-gh label create ready --color 0E8A16 --description "Trusted work ready for autonomous-work-loops intake" --force
-gh label create in-progress --color FBCA04 --description "Autonomous-work-loops has claimed this work" --force
-gh label create needs-fix --color D93F0B --description "Reviewer found blocking defects or proof failed" --force
-gh label create ready-for-human --color 5319E7 --description "Proof passed and autonomous review converged" --force
-gh label create unproven --color BFDADC --description "No accepted proof command is configured or available" --force
-gh label create did-not-converge --color B60205 --description "Review/fix cycle cap reached with blockers remaining" --force
-gh label create stalled --color 000000 --description "Runner exceeded retry or runtime wall and needs a human" --force
-```
-
-4. Create a small issue authored by a trusted actor.
-5. Apply `ready`.
-6. Let the foreground supervisor work.
-7. Confirm exactly one `loop/impl/issue-<n>` branch and one PR.
-8. Confirm the PR has proof markers and reaches `ready-for-human`, or one of the human-gated terminal labels.
-9. Confirm no generated `.agent-loops/evidence/` logs appear in the implementation PR diff.
-
-## V1 Non-Goals
-
-- No system cron install.
-- No GitHub Actions schedule.
-- No Codex Automations.
-- No Claude `/loop` scheduler.
-- No GitLab adapter.
-- No hosted bot.
 - No autonomous merge.
-- No browser/Playwright proof under a locked Codex sandbox unless a compatible execution surface is validated.
+- No hosted bot.
+- No GitLab adapter.
+- No system cron, launchd, or GitHub Actions schedule.
+- No Codex Automations or Claude `/loop` scheduler.
+- No browser/Playwright proof under a locked Codex sandbox unless a compatible
+  execution surface is validated.

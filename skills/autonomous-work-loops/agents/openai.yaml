@@ -1,0 +1,4 @@
+interface:
+  display_name: "Autonomous Work Loops"
+  short_description: "Turn trusted GitHub issues into proven, reviewed PRs."
+  default_prompt: "Set up autonomous work loops here."

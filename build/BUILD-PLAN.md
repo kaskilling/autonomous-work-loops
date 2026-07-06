@@ -1,6 +1,6 @@
 # BUILD PLAN — `autonomous-work-loops` skill (V1)
 
-Historical note: this was the original V1 build plan. ADR-0003 was amended after the first live test, so the current skill converges on a clean proven first pass and does not require a mandatory fix cycle. ADR-0004 was later tightened after gate validation: strict trust is now author-only dispatch, not collaborator or vouch inference. The V1 runner surface was also narrowed to Codex Automations, Claude `/loop`, or the local foreground supervisor; system cron installation and GitHub Actions schedules are outside V1. Treat the body below as historical where it conflicts with current ADRs.
+Historical note: this was the original V1 build plan. ADR-0003 was amended after the first live test, so the current skill converges on a clean proven first pass and does not require a mandatory fix cycle. ADR-0004 was later tightened after gate validation: strict trust is now author-only dispatch, not collaborator or vouch inference. V1 now has one supported runner surface: the local foreground supervisor. Codex Automations, Claude `/loop`, system cron, launchd, and GitHub Actions schedules are outside V1. Treat the body below as historical where it conflicts with current ADRs.
 
 You are an autonomous build agent. Build a **skill** named `autonomous-work-loops` exactly to this spec. This plan is self-contained; the authoritative design rationale is in `../design/adr/` (read `0000-index.md` first, then any ADR you need). Do **not** re-litigate design decisions — they are settled. Your job is to render them into a working skill.
 
@@ -9,14 +9,14 @@ You are an autonomous build agent. Build a **skill** named `autonomous-work-loop
 - **Read `../design/adr/0000-index.md` and `../design/ECOSYSTEM.md` before writing anything.** They are the source of truth.
 - **Stay in V1 scope.** Do NOT build: a Maintainer Loop, evidence consolidation, Core Memory regeneration, autonomous playbook mutation, a `loopctl` program, or non-GitHub adapters. These are V2. If you find yourself writing them, stop.
 - **The skill is prose/markdown, not a runtime framework** (ADR-0009). The only executable artifacts allowed are: (a) a small `install.sh`, (b) runner *templates* under `assets/`, and (c) optional tiny read-only shell snippets the tick instructions tell the agent to run (e.g. `git diff --numstat`). No daemon, no orchestrator program, no Python helper.
-- Output goes in `../skill/autonomous-work-loops/`. Create it.
+- Output goes in `../skills/autonomous-work-loops/`. Create it.
 - After building, run the self-verification checklist in §6 and write `../build/BUILD-REPORT.md` with pass/fail per item.
 - Commit your work to git with clear messages.
 
 ## 1. Package layout to produce
 
 ```
-skill/autonomous-work-loops/
+skills/autonomous-work-loops/
 ├── SKILL.md                      # Router. <100 lines. Frontmatter + mode dispatch.
 ├── references/
 │   ├── bootstrap.md              # Discovery checklist, setup model, Critical Decisions, Bootstrap Report
@@ -33,12 +33,13 @@ skill/autonomous-work-loops/
 └── assets/
     ├── agent-loops-template/     # What bootstrap renders into the TARGET repo's .agent-loops/
     │   ├── config.yaml           # Annotated, with the V2 keys present-but-dormant
+    │   ├── context.md            # Small repo context contract every tick reads
+    │   ├── setup-labels.sh       # Idempotent required-label setup helper
     │   └── playbooks/{implementer,reviewer,fixer}.md
     ├── runners/
     │   ├── codex.sh.tmpl         # guarded Codex tick runner; parent shell owns Git/GitHub mutation
-    │   ├── codex-automation.md.tmpl # Codex Automation prompts, one per role
-    │   ├── loop.md.tmpl          # /loop invocation per role (Claude Code)
-    │   └── local-supervisor.sh.tmpl # generic foreground fallback; no daemon install
+    │   ├── claude.sh.tmpl        # guarded Claude tick runner; parent shell owns Git/GitHub mutation
+    │   └── local-supervisor.sh.tmpl # only V1 runner surface; visible foreground process
     └── install.sh                # symlink/copy this folder into ~/.claude ~/.codex ~/.agents skills dirs
 ```
 
@@ -100,7 +101,7 @@ budgets:
 - [ ] No tick playbook bypasses `adapter-github.md` with raw `gh`; bootstrap setup may include `gh auth` and label creation commands for the operator.
 - [ ] Marker grammar is versioned (`v=1`) and parseable.
 - [ ] `config.yaml` has all V1-active keys AND the dormant `# v2` keys.
-- [ ] Guarded/local runner templates contain an external wall; `/loop` and Codex Automation profiles document any weaker surface guarantee.
+- [ ] Guarded role-runner templates contain an external wall; the foreground supervisor selects `codex.sh`, `claude.sh`, or `AWL_ROLE_RUNNER`.
 - [ ] No V2 machinery built (no maintainer/consolidation/loopctl/non-GitHub adapter) — grep to confirm absence.
 - [ ] `install.sh` targets all three skill dirs (`.claude`, `.codex`, `.agents`).
 - [ ] A "dry-run walkthrough" section in SKILL.md or bootstrap.md traces: one `ready` issue → claim → implement → prove → PR → review → fix → converge, naming the state transitions.

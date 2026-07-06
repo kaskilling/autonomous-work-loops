@@ -2,7 +2,9 @@
 
 Cites ADR-0001, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0010.
 
-Bootstrap mode sets up `.agent-loops/` in the target repository and exits. It discovers current repo facts, renders config and runner artifacts from `assets/`, and writes a Bootstrap Report. It does not start a loop, spawn a daemon, or assume future ticks remember anything.
+Bootstrap mode sets up `.agent-loops/` in the target repository and exits. Prefer the deterministic `assets/bootstrap.sh` script; it discovers current repo facts, renders config and runner artifacts from `assets/`, and writes a Bootstrap Report. It does not start a loop, spawn a daemon, mutate GitHub labels, or assume future ticks remember anything.
+
+Use manual rendering only when `assets/bootstrap.sh` is unavailable or the user explicitly asks for a guided setup.
 
 ## Discovery Checklist
 
@@ -13,12 +15,10 @@ Bootstrap mode sets up `.agent-loops/` in the target repository and exits. It di
    - `gh repo view --json nameWithOwner,owner,visibility,viewerPermission,defaultBranchRef,hasIssuesEnabled`
 3. Identify default branch, current remote, repository visibility, explicit loop dispatchers, and whether issues and pull requests are enabled.
 4. Discover proof commands for `test`, `build`, and `lint` from package scripts, build files, CI workflows, README instructions, and existing developer docs.
-5. Infer trust posture:
-   - `permissive` for solo private repos.
-   - `strict` for public or multi-contributor repos.
+5. Default deterministic bootstrap to `trust_posture: strict`. Agents may suggest `permissive` only for a clearly solo private repo, and the user must approve that config edit.
 6. Build `trusted_actors` from the authenticated GitHub login, explicit maintainers, owners, or named loop dispatchers. Add the authenticated login when `gh api user --jq .login` succeeds and the user is the repo owner, has maintainer/admin/write permission, or is the person explicitly setting up the loop. Do not add every collaborator by default. Leave the list editable. If the authenticated login cannot be proven, stop and ask the user to run `gh auth login`.
-7. Render the only V1 runner surface: the local foreground supervisor. Render from `assets/runners/`: `local-supervisor.sh.tmpl` plus the guarded role runner for the local harness (`codex.sh.tmpl` for Codex CLI, `claude.sh.tmpl` for Claude Code, or both when unsure). The supervisor loops in one visible terminal and invokes exactly one guarded role tick at a time. The guarded role runners keep trust, claim, Git mutation, proof, PRs, labels, and markers in the parent shell; nested Codex or Claude edits the working tree only or returns review text. This avoids managed-sandbox `.git` write denial while keeping the branch-ref claim deterministic. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications. Do not install Codex Automations, Claude `/loop`, system cron, launchd, or GitHub Actions schedules during V1 bootstrap.
-8. Render `.agent-loops/config.yaml`, `.agent-loops/context.md`, `.agent-loops/setup-labels.sh`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
+7. Render the only V1 runner surface: the local foreground supervisor. Render from `assets/runners/`: `local-supervisor.sh.tmpl`, `guarded-role-runner-common.sh.tmpl`, plus the guarded role runner wrapper for the local harness (`codex.sh.tmpl` for Codex CLI, `claude.sh.tmpl` for Claude Code, or both when unsure). The supervisor loops in one visible terminal and invokes exactly one guarded role tick at a time. The guarded role runner common file keeps trust, claim, Git mutation, proof, PRs, labels, and markers in the parent shell; the thin Codex/Claude wrappers only define nested agent invocation. Nested Codex or Claude edits the working tree only or returns review text. This avoids managed-sandbox `.git` write denial while keeping the branch-ref claim deterministic. The external cost wall prefers `timeout`, then `gtimeout` (coreutils on macOS), else a background-kill fallback baked into the runner. Record credential implications. Do not install Codex Automations, Claude `/loop`, system cron, launchd, or GitHub Actions schedules during V1 bootstrap.
+8. Render `.agent-loops/config.yaml`, `.agent-loops/context.md`, `.agent-loops/setup-labels.sh`, `.agent-loops/doctor.sh`, `.agent-loops/FIRST-TRIAL-ISSUE.md`, `.agent-loops/playbooks/implementer.md`, `.agent-loops/playbooks/reviewer.md`, `.agent-loops/playbooks/fixer.md`, and `.agent-loops/evidence/inbox/`.
 
 ## Required Labels
 
@@ -44,7 +44,7 @@ Do not treat missing labels as a background concern. Without these labels, the s
 
 ## Setup Model
 
-Copy the template tree from `assets/agent-loops-template/` into the target repo as `.agent-loops/`. Then fill placeholders with discovered repo facts and user-approved defaults. Copy the selected runner template from `assets/runners/` into the location the target repo expects.
+Copy the template tree from `assets/agent-loops-template/` into the target repo as `.agent-loops/`. Then fill placeholders with discovered repo facts and user-approved defaults. Copy `local-supervisor.sh.tmpl`, `guarded-role-runner-common.sh.tmpl`, and the selected agent wrapper template from `assets/runners/` into the location the target repo expects. Make `setup-labels.sh`, `doctor.sh`, and rendered runner scripts executable.
 
 Bootstrap may edit target-repo files, but it must keep `.agent-loops/config.yaml` and `.agent-loops/context.md` as the durable contracts future ticks read. Future ticks reconstruct all state from `.agent-loops/` and host state.
 
@@ -52,10 +52,12 @@ Bootstrap may edit target-repo files, but it must keep `.agent-loops/config.yaml
 
 Write a Bootstrap Report in the target repo or in the conversation. Include:
 
-- `trust_posture`, why it was inferred, and the editable `trusted_actors` list. In strict mode, only issues authored by these actors are executable; external work needs a trusted-authored dispatch issue.
+- `trust_posture`, which defaults to `strict`, and the editable `trusted_actors` list. In strict mode, only issues authored by these actors are executable; external work needs a trusted-authored dispatch issue.
 - Proof commands found or missing. Missing proof is a human gate and prevents autonomous convergence.
 - Context contract. Include the repo instruction files discovered (`AGENTS.md`, `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, path-local docs), generated paths, and any repo-specific rules that role ticks must read before editing or reviewing.
 - Runner and credential boundary. The local foreground supervisor is the only V1 runner surface. Manual guarded ticks are for debugging. Codex Automations, Claude `/loop`, hosted CI/bot runners, cron, and launchd are outside the V1 default.
+- Doctor command. Tell the user to run `.agent-loops/doctor.sh` after labels are created and before arming the supervisor.
+- First trial. Point the user at `.agent-loops/FIRST-TRIAL-ISSUE.md` for the first safe smoke-test issue body.
 - Budget defaults and any requested changes. Budget increases require human approval.
 - Reviewer model. Empty `reviewer_model` means same-model adversarial review; a configured override is the recommended quality upgrade.
 
@@ -86,6 +88,8 @@ Write a Bootstrap Report in the target repo or in the conversation. Include:
   - repo instructions:
   - generated paths:
   - repo-specific rules:
+- Doctor:
+- First trial issue:
 - Runner:
 - Credentials:
 - Budgets:
