@@ -17,6 +17,7 @@ labels:
   in_progress: in-progress
   needs_fix: needs-fix
   ready_for_human: ready-for-human
+  ready_for_human_baseline_red: ready-for-human-baseline-red
   unproven: unproven
   did_not_converge: did-not-converge
   stalled: stalled

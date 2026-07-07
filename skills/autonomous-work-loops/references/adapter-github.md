@@ -59,7 +59,7 @@ gh api "repos/$repo/pulls/$pr/comments" --paginate
 gh api "repos/$repo/commits/$default_branch/check-runs"
 ```
 
-Reviewer ticks use `statusCheckRollup` for PR-hosted checks, inline PR review comments for external bot findings, and default-branch check runs for baseline comparison. Pending hosted checks are not approval; failed hosted checks route to `needs-fix` unless the same check name is already failing on the default branch.
+Reviewer ticks use `statusCheckRollup` for PR-hosted checks, inline PR review comments for external bot findings, and default-branch check runs for baseline comparison. Pending hosted checks are not approval; failed hosted checks route to `needs-fix` unless the same check name is already failing on the default branch, which routes to `ready-for-human-baseline-red`.
 
 ## `post_marker`
 

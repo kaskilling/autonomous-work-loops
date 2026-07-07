@@ -2,9 +2,9 @@
 
 Cites ADR-0001, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0010.
 
-Bootstrap mode sets up `.agent-loops/` in the target repository and exits. Prefer the deterministic `assets/bootstrap.sh` script; it discovers current repo facts, renders config and runner artifacts from `assets/`, and writes a Bootstrap Report. It does not start a loop, spawn a daemon, mutate GitHub labels, or assume future ticks remember anything.
+Bootstrap mode sets up `.agent-loops/` in the target repository. Prefer the deterministic `assets/bootstrap.sh` script; it discovers current repo facts, renders config and runner artifacts from `assets/`, and writes a Bootstrap Report. Without `--guided`, it exits without starting a loop, spawning a daemon, or mutating GitHub labels. With `--guided`, it performs the first approved setup actions in the foreground. It never assumes future ticks remember anything.
 
-Use manual rendering only when `assets/bootstrap.sh` is unavailable or the user explicitly asks for a guided setup.
+Use manual rendering only when `assets/bootstrap.sh` is unavailable. If the user asks for guided setup, run `assets/bootstrap.sh --guided "$PWD"`; guided setup creates or updates labels, runs doctor, creates the smoke issue, waits until GitHub reports it with `ready`, and runs one one-shot supervisor tick.
 
 ## Discovery Checklist
 
@@ -34,7 +34,8 @@ Equivalent direct commands:
 gh label create ready --color 0E8A16 --description "Trusted work ready for autonomous-work-loops intake" --force
 gh label create in-progress --color FBCA04 --description "Autonomous-work-loops has claimed this work" --force
 gh label create needs-fix --color D93F0B --description "Reviewer found blocking defects or proof failed" --force
-gh label create ready-for-human --color 5319E7 --description "Proof, hosted checks, and autonomous review converged" --force
+gh label create ready-for-human --color 5319E7 --description "Proof, green hosted checks, and autonomous review converged" --force
+gh label create ready-for-human-baseline-red --color 8A63D2 --description "Proof and review converged; hosted failures match default-branch baseline" --force
 gh label create unproven --color BFDADC --description "No accepted proof command is configured or available" --force
 gh label create did-not-converge --color B60205 --description "Review/fix cycle cap reached with blockers remaining" --force
 gh label create stalled --color 000000 --description "Runner exceeded retry or runtime wall and needs a human" --force
@@ -65,9 +66,9 @@ Write a Bootstrap Report in the target repo or in the conversation. Include:
 
 1. A trusted actor authors issue `123` and applies `ready`. If the original request came from an external or untrusted issue, the trusted actor writes a dispatch issue that summarizes the accepted work and links the source issue.
 2. Implementer tick calls `list_ready_work`, verifies `is_trusted_actor(123)`, then calls `claim_work(123)`, which re-asserts trust before atomically creating `loop/impl/issue-123`, setting `in-progress`, implementing one unit, running configured proof, posting an implementer marker, and calling `open_change`.
-3. Reviewer tick calls `read_state`, `get_head_sha`, and `read_markers`. If proof fails or it finds blocking defects, it sets `needs-fix`. If local proof and review pass, it waits for hosted checks, ingests inline external bot review comments, compares hosted failures with the default branch baseline, and only then converges to `ready-for-human`. A clean first pass converges without a forced fix cycle, but pending hosted checks stay pending until a later tick can classify them.
+3. Reviewer tick calls `read_state`, `get_head_sha`, and `read_markers`. If proof fails or it finds blocking defects, it sets `needs-fix`. If local proof and review pass, it waits for hosted checks, ingests inline external bot review comments, compares hosted failures with the default branch baseline, and only then converges to `ready-for-human` or `ready-for-human-baseline-red`. A clean first pass converges without a forced fix cycle, but pending hosted checks stay pending until a later tick can classify them.
 4. (Only if `needs-fix`) Fixer tick reads reviewer feedback, patches the branch, runs proof, posts a fixer marker with an incremented cycle, and returns the change to review.
-5. (Only if a cycle happened) Reviewer tick re-checks the new head. If proof passes and no blocking defects remain, it sets `ready-for-human`.
+5. (Only if a cycle happened) Reviewer tick re-checks the new head. If proof passes and no blocking defects remain, it sets `ready-for-human` or `ready-for-human-baseline-red` based on hosted-check classification.
 6. If proof is absent, the state becomes `unproven`. If the cycle cap is hit with blocking defects, the state becomes `did-not-converge`. If repeated runner kills exceed the retry cap, the state becomes `stalled`.
 
 ## Bootstrap Report Template

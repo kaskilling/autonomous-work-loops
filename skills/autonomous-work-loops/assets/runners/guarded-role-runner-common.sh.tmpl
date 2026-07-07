@@ -105,6 +105,7 @@ label_ready="$(cfg labels.ready)"
 label_in_progress="$(cfg labels.in_progress)"
 label_needs_fix="$(cfg labels.needs_fix)"
 label_ready_for_human="$(cfg labels.ready_for_human)"
+label_ready_for_human_baseline_red="$(cfg labels.ready_for_human_baseline_red)"
 label_unproven="$(cfg labels.unproven)"
 label_did_not_converge="$(cfg labels.did_not_converge)"
 label_stalled="$(cfg labels.stalled)"
@@ -226,7 +227,7 @@ safe_pr_remove_label() {
 
 set_issue_state() {
   local issue="$1" repo_slug="$2" target="$3" label
-  for label in "$label_ready" "$label_in_progress" "$label_needs_fix" "$label_ready_for_human" "$label_unproven" "$label_did_not_converge" "$label_stalled"; do
+  for label in "$label_ready" "$label_in_progress" "$label_needs_fix" "$label_ready_for_human" "$label_ready_for_human_baseline_red" "$label_unproven" "$label_did_not_converge" "$label_stalled"; do
     [ "$label" = "$target" ] || safe_issue_remove_label "$issue" "$repo_slug" "$label"
   done
   gh issue edit "$issue" --repo "$repo_slug" --add-label "$target" >/dev/null
@@ -234,7 +235,7 @@ set_issue_state() {
 
 set_pr_state() {
   local pr="$1" repo_slug="$2" target="$3" label
-  for label in "$label_in_progress" "$label_needs_fix" "$label_ready_for_human" "$label_unproven" "$label_did_not_converge" "$label_stalled"; do
+  for label in "$label_in_progress" "$label_needs_fix" "$label_ready_for_human" "$label_ready_for_human_baseline_red" "$label_unproven" "$label_did_not_converge" "$label_stalled"; do
     [ "$label" = "$target" ] || safe_pr_remove_label "$pr" "$repo_slug" "$label"
   done
   gh pr edit "$pr" --repo "$repo_slug" --add-label "$target" >/dev/null
@@ -462,7 +463,7 @@ wait_for_hosted_checks() {
       printf '%s\n' "$report"
       return 0
     fi
-    say "$(printf '%s\n' "$report" | sed -n '2p'); waiting before final handoff"
+    say "$(printf '%s\n' "$report" | sed -n '2p'); waiting before final handoff" >&2
     sleep 15
   done
 }
@@ -541,8 +542,11 @@ After that, provide concise findings. Use blocking only for defects that should 
 }
 
 implementer() {
-  local repo_slug issue actor branch base title body claim_sha proof_log pr_body pr head_sha proof_rc log prompt_log timeout_count existing_pr
+  local repo_slug issue actor branch base title body claim_sha proof_log pr_body pr head_sha proof_rc log prompt_log timeout_count existing_pr retry_issue retry_actor retry_title
   repo_slug="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
+  retry_issue=""
+  retry_actor=""
+  retry_title=""
 
   local active_block=0
   while IFS=$'\t' read -r issue actor title; do
@@ -556,8 +560,14 @@ implementer() {
     elif [ "${timeout_count:-0}" -gt 0 ]; then
       existing_pr="$(gh pr list --repo "$repo_slug" --state open --head "$branch" --json number --jq '.[0].number // empty')"
       if [ -z "$existing_pr" ]; then
-        post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=timeout verdict=retry cycle=0 ts=$(ts) -->" "Recovering timed-out implementer claim retry ${timeout_count}/${kill_retries}; no PR exists for ${branch}."
-        gh issue edit "$issue" --repo "$repo_slug" --remove-label "$label_in_progress" --add-label "$label_ready" >/dev/null
+        if [ -z "$retry_issue" ]; then
+          retry_issue="$issue"
+          retry_actor="$actor"
+          retry_title="$title"
+          post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=timeout verdict=retry cycle=0 ts=$(ts) -->" "Recovering timed-out implementer claim retry ${timeout_count}/${kill_retries}; no PR exists for ${branch}. Retrying this claim in the current tick."
+        else
+          active_block=1
+        fi
       else
         active_block=1
       fi
@@ -590,7 +600,8 @@ Stale in-progress claim detected with no claim branch. Releasing the advisory la
       git fetch origin "$branch"
       git switch -C "$branch" "origin/$branch"
       claim_sha="$(git rev-parse HEAD)"
-      gh issue edit "$issue" --repo "$repo_slug" --remove-label "$label_ready" --add-label "$label_in_progress" >/dev/null
+      safe_issue_remove_label "$issue" "$repo_slug" "$label_ready"
+      gh issue edit "$issue" --repo "$repo_slug" --add-label "$label_in_progress" >/dev/null
     else
       git fetch origin
       base="$(default_branch)"
@@ -601,7 +612,8 @@ Stale in-progress claim detected with no claim branch. Releasing the advisory la
         echo "lost claim race for issue #${issue}"
         return 0
       fi
-      gh issue edit "$issue" --repo "$repo_slug" --remove-label "$label_ready" --add-label "$label_in_progress" >/dev/null
+      safe_issue_remove_label "$issue" "$repo_slug" "$label_ready"
+      gh issue edit "$issue" --repo "$repo_slug" --add-label "$label_in_progress" >/dev/null
     fi
     say "claimed issue #${issue} on ${branch}"
 
@@ -684,7 +696,12 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     fi
     cleanup_workspace_artifacts
     return 0
-  done < <(gh issue list --repo "$repo_slug" --state open --label "$label_ready" --json number,title,author --jq '.[] | [.number, .author.login, .title] | @tsv')
+  done < <(
+    if [ -n "$retry_issue" ]; then
+      printf '%s\t%s\t%s\n' "$retry_issue" "$retry_actor" "$retry_title"
+    fi
+    gh issue list --repo "$repo_slug" --state open --label "$label_ready" --json number,title,author --jq '.[] | [.number, .author.login, .title] | @tsv'
+  )
 
   print_no_ready_diagnostic "$repo_slug"
 }
@@ -699,13 +716,13 @@ reviewer() {
       *) continue ;;
     esac
     case ",$labels," in
-      *",$label_ready_for_human,"*|*",$label_needs_fix,"*|*",$label_unproven,"*|*",$label_did_not_converge,"*|*",$label_stalled,"*) continue ;;
+      *",$label_ready_for_human,"*|*",$label_ready_for_human_baseline_red,"*|*",$label_needs_fix,"*|*",$label_unproven,"*|*",$label_did_not_converge,"*|*",$label_stalled,"*) continue ;;
     esac
     git fetch origin "$branch"
     git switch -C "$branch" "origin/$branch"
     head="$(git rev-parse HEAD)"
     prior_verdict="$(latest_review_verdict_for_head "$pr" "$repo_slug" "$head")"
-    if [ "$prior_verdict" = "ready-for-human" ] || [ "$prior_verdict" = "unproven" ] || [ "$prior_verdict" = "did-not-converge" ]; then
+    if [ "$prior_verdict" = "ready-for-human" ] || [ "$prior_verdict" = "ready-for-human-baseline-red" ] || [ "$prior_verdict" = "unproven" ] || [ "$prior_verdict" = "did-not-converge" ]; then
       echo "reviewer no-op: PR #${pr} head ${head} already reviewed with verdict=${prior_verdict}"
       return 0
     fi
@@ -748,6 +765,10 @@ reviewer() {
           post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Local proof passed, but hosted checks failed and do not match a known default-branch baseline failure.\n$(printf '%s\n' "$check_report" | tail -n +2)"
           set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
+        elif [ "$check_state" = "baseline-failed" ]; then
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=ready-for-human-baseline-red cycle=${cycle} ts=$(ts) -->" "Guarded reviewer reran proof and adversarial review found no blocking defects. Hosted checks failed only where the default branch is already red. Prompt: ${review_log%.log}-prompt.log. Proof: ${proof_log}. Review: ${review_log}.\n$(printf '%s\n' "$check_report" | tail -n +2)"
+          set_pr_state "$pr" "$repo_slug" "$label_ready_for_human_baseline_red"
+          [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_ready_for_human_baseline_red"
         else
           post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=ready-for-human cycle=${cycle} ts=$(ts) -->" "Guarded reviewer reran proof and adversarial review found no blocking defects. Prompt: ${review_log%.log}-prompt.log. Proof: ${proof_log}. Review: ${review_log}.\n$(printf '%s\n' "$check_report" | tail -n +2)"
           set_pr_state "$pr" "$repo_slug" "$label_ready_for_human"

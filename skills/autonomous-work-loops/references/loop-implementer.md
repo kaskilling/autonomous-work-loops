@@ -16,7 +16,7 @@ Goal: claim one trusted `ready` issue, implement one coherent change, prove it w
 8. Run configured proof commands in this order when present: build, lint, test. Record exact commands and outcomes.
 9. If proof passes, call `post_marker` with `verdict=proof-passed` or `implemented`, then call `open_change`.
 10. If proof fails, call `post_marker` with `verdict=proof-failed`, call `set_label` to `needs-fix`, and include failing output summary for Fixer.
-11. If proof is absent, call `post_marker` with `verdict=unproven`, call `set_label` to `unproven` (its own terminal label, NOT `ready-for-human`), and do not start autonomous review. The `ready-for-human` label must remain a guarantee that proof ran.
+11. If proof is absent, call `post_marker` with `verdict=unproven`, call `set_label` to `unproven` (its own terminal label, NOT a human-handoff label), and do not start autonomous review. Human-handoff labels must remain a guarantee that proof ran.
 12. Append structured evidence to `.agent-loops/evidence/inbox/` for notable failures, missing proof, repeated defects, or confusing repo-specific rules.
 
 ## Marker

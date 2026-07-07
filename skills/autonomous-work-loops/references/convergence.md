@@ -6,7 +6,8 @@ Convergence is marker-derived. A tick never relies on remembered prior outcomes.
 
 ## Outcomes
 
-- `ready-for-human`: configured local proof passed, autonomous review found no blocking defects, external inline bot review comments for the current head were absent or already addressed, and hosted checks are green or classified as matching a failing default-branch baseline. A clean first review converges immediately only after these host checks settle.
+- `ready-for-human`: configured local proof passed, autonomous review found no blocking defects, external inline bot review comments for the current head were absent or already addressed, and hosted checks are green, skipped, neutral, or absent. A clean first review converges immediately only after these host checks settle.
+- `ready-for-human-baseline-red`: configured local proof and autonomous review passed, but hosted checks failed only where the same check names are already failing on the default branch.
 - `needs-fix`: proof failed or blocking defects exist.
 - `checks-pending`: local proof and autonomous review passed, but hosted checks were still pending at the wait budget. This is non-terminal; a later reviewer tick re-checks the same head.
 - `did-not-converge`: cycle cap reached with blocking defects still unresolved.
@@ -24,7 +25,7 @@ Read latest markers with `read_markers`.
 
 At cap:
 
-- Non-blocking items only: set `ready-for-human` and list the known remaining items in the marker body.
+- Non-blocking items only: set `ready-for-human` and list the known remaining items in the marker body. If the only hosted blocker is a default-branch baseline failure, set `ready-for-human-baseline-red`.
 - Any blocking item: set `did-not-converge`, route to human, and list the blocking items.
 
 ## Proof Rules
@@ -33,9 +34,9 @@ Proof present and passing allows the reviewer to inspect the change, but hosted 
 
 ## Hosted Check Rules
 
-Before setting `ready-for-human`, the reviewer waits for hosted PR checks up to the configured wait budget.
+Before setting a human-handoff label, the reviewer waits for hosted PR checks up to the configured wait budget.
 
 - Pending after the wait: post `checks-pending`, leave labels non-terminal, and let a later tick retry.
 - Failed and not known to fail on the default branch: route to `needs-fix`.
-- Failed but the same check name is already failing on the default branch: allow `ready-for-human`, but include the baseline classification in the marker body.
+- Failed but the same check name is already failing on the default branch: set `ready-for-human-baseline-red` and include the baseline classification in the marker body.
 - Green, skipped, neutral, or absent checks: allow normal convergence after local review passes.

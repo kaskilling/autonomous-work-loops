@@ -142,6 +142,7 @@ fi
 AWL_TARGET="$target" \
 AWL_TMP="$tmp" \
 AWL_ASSETS_DIR="$assets_dir" \
+AWL_GUIDED="$guided" \
 AWL_RUNNER_TEMPLATES="$runner_template_dir" \
 AWL_GH_USER="$gh_user" \
 AWL_GH_STATUS="$gh_status" \
@@ -155,6 +156,7 @@ from pathlib import Path
 target = Path(os.environ["AWL_TARGET"])
 tmp = Path(os.environ["AWL_TMP"])
 assets_dir = Path(os.environ["AWL_ASSETS_DIR"])
+guided = os.environ.get("AWL_GUIDED", "0") == "1"
 runner_templates = Path(os.environ["AWL_RUNNER_TEMPLATES"])
 gh_user = os.environ.get("AWL_GH_USER", "").strip()
 gh_status = os.environ.get("AWL_GH_STATUS", "")
@@ -325,7 +327,9 @@ proof_note_lines = "\n".join(f"  - {item}" for item in proof_notes) or "  - (non
 instruction_lines = "\n".join(f"  - {item}" for item in instructions) or "  - (none discovered)"
 
 missing_proof = [key for key, value in proof.items() if not value]
-human_gates = ["Create required labels by running .agent-loops/setup-labels.sh."]
+human_gates = []
+if not guided:
+    human_gates.append("Create required labels by running .agent-loops/setup-labels.sh.")
 if missing_proof:
     human_gates.append(
         "Fill missing proof commands before expecting autonomous convergence: "
@@ -336,6 +340,32 @@ if not gh_user:
     human_gates.append("Authenticate GitHub CLI if trusted_actors should include the operator.")
 
 human_gate_lines = "\n".join(f"  - {item}" for item in human_gates)
+if not human_gate_lines:
+    human_gate_lines = "  - (none for guided setup)"
+required_label_text = (
+    "guided setup will create/update labels before doctor"
+    if guided
+    else "not mutated; run `.agent-loops/setup-labels.sh`"
+)
+doctor_text = (
+    "guided setup will run `.agent-loops/doctor.sh` after labels exist"
+    if guided
+    else "run `.agent-loops/doctor.sh` after labels exist and before arming the supervisor"
+)
+critical_label_text = (
+    "GitHub labels are created/updated by guided setup."
+    if guided
+    else "GitHub labels are not created by bootstrap."
+)
+guided_action_lines = (
+    "- Guided actions:\n"
+    "  - Labels: create/update via `.agent-loops/setup-labels.sh`\n"
+    "  - Doctor: run `.agent-loops/doctor.sh`\n"
+    "  - Smoke issue: create from `.agent-loops/FIRST-TRIAL-ISSUE.md`\n"
+    "  - Supervisor: run `.agent-loops/runners/local-supervisor.sh --once \"$PWD\"`\n"
+    if guided
+    else "- Guided actions: not requested"
+)
 
 report = f"""# Autonomous Work Loops Bootstrap Report
 
@@ -350,7 +380,7 @@ report = f"""# Autonomous Work Loops Bootstrap Report
 - GitHub auth status: {gh_status}
 - Trust posture: strict
 - Trusted actors: {trusted_text}
-- Required labels: not mutated; run `.agent-loops/setup-labels.sh`
+- Required labels: {required_label_text}
 - Proof commands:
 {proof_lines}
 - Proof notes:
@@ -365,13 +395,14 @@ report = f"""# Autonomous Work Loops Bootstrap Report
     - `.agent-loops/playbooks/`
     - `.agent-loops/evidence/inbox/`
   - repo-specific rules: read discovered instruction files before every tick
-- Doctor: run `.agent-loops/doctor.sh` after labels exist and before arming the supervisor
+- Doctor: {doctor_text}
 - First trial issue: `.agent-loops/FIRST-TRIAL-ISSUE.md`
 - First trial command:
   - one-command guided path: `{assets_dir}/bootstrap.sh --guided "{target}"`
   - `gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready`
   - `.agent-loops/runners/local-supervisor.sh --once "$PWD"`
   - watch mode after the smoke test: `.agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"`
+{guided_action_lines}
 - Runner: local foreground supervisor at `.agent-loops/runners/local-supervisor.sh`
   - shared guarded runner body: `.agent-loops/runners/guarded-role-runner-common.sh`
 - Credentials: runner uses local shell credentials; bootstrap did not install cron, launchd, Actions schedules, Codex Automations, or Claude `/loop`
@@ -381,7 +412,7 @@ report = f"""# Autonomous Work Loops Bootstrap Report
   - Existing `.agent-loops` is preserved unless bootstrap runs with `--force`.
   - Strict trust is retained as the conservative default.
   - Missing proof commands are left blank rather than guessed.
-  - GitHub labels are not created by bootstrap.
+  - {critical_label_text}
 - Human gates:
 {human_gate_lines}
 """
@@ -421,7 +452,7 @@ printf 'watch later: %s --watch --interval 600 "$PWD"\n' "${dest}/runners/local-
 
 if [ "$guided" -eq 1 ]; then
   if [ "$allow_incomplete" -eq 1 ]; then
-    printf '--guided cannot run with --allow-incomplete because it mutates GitHub and starts a tick.\n' >&2
+    printf '%s\n' '--guided cannot run with --allow-incomplete because it mutates GitHub and starts a tick.' >&2
     exit 2
   fi
   printf 'guided setup: creating/updating labels\n'
@@ -429,7 +460,21 @@ if [ "$guided" -eq 1 ]; then
   printf 'guided setup: running doctor\n'
   (cd "$target" && "$dest/doctor.sh")
   printf 'guided setup: creating smoke issue\n'
-  (cd "$target" && gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready)
+  smoke_issue_url="$(cd "$target" && gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready)"
+  printf 'guided setup: created %s\n' "$smoke_issue_url"
+  smoke_issue="${smoke_issue_url##*/}"
+  printf 'guided setup: waiting for smoke issue #%s to be visible with label ready\n' "$smoke_issue"
+  deadline=$(( $(date +%s) + 60 ))
+  while true; do
+    if (cd "$target" && gh issue view "$smoke_issue" --json labels --jq '.labels[].name' | grep -Fxq ready); then
+      break
+    fi
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      printf 'guided setup: smoke issue #%s was not visible with label ready before timeout\n' "$smoke_issue" >&2
+      exit 1
+    fi
+    sleep 2
+  done
   printf 'guided setup: running one supervisor tick\n'
   (cd "$target" && "$dest/runners/local-supervisor.sh" --once "$target")
 fi

@@ -16,8 +16,9 @@ agent roles:
 3. **Fixer** handles blocking review feedback when needed.
 
 When proof passes, hosted checks are classified, and review has no blocking
-findings, the PR is labeled `ready-for-human`. You still review and merge it
-yourself.
+findings, the PR is labeled `ready-for-human`. If hosted checks are red only
+because the default branch is already red, the PR is labeled
+`ready-for-human-baseline-red` instead. You still review and merge it yourself.
 
 V1 is local and GitHub-only. It is not a hosted bot, daemon, cron job, GitHub
 Action, Codex Automation, or Claude `/loop` scheduler.
@@ -127,7 +128,8 @@ the broader proof after the loop is proven on that repo.
 | `ready` | Trusted issue is available for the loop | You apply this |
 | `in-progress` | The loop claimed the issue or PR | Wait or inspect |
 | `needs-fix` | Review or proof found a code blocker | Wait or inspect |
-| `ready-for-human` | Proof, hosted checks, and autonomous review converged | Review and merge |
+| `ready-for-human` | Proof, green hosted checks, and autonomous review converged | Review and merge |
+| `ready-for-human-baseline-red` | Proof and review converged; hosted failures match the default branch baseline | Review the baseline risk before merge |
 | `unproven` | No accepted proof command is configured | Fix setup or handle manually |
 | `did-not-converge` | Review/fix cycle cap was reached | Human review needed |
 | `stalled` | Runtime wall, retry wall, or local harness/setup blocker was reached | Inspect logs and runner state |
@@ -136,6 +138,7 @@ Typical paths:
 
 ```text
 clean path: ready -> in-progress -> ready-for-human
+baseline:   ready -> in-progress -> ready-for-human-baseline-red
 fix path:   ready -> in-progress -> needs-fix -> in-progress -> ready-for-human
 stop path:  ready -> in-progress -> unproven | did-not-converge | stalled
 ```

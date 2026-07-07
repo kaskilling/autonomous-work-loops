@@ -10,6 +10,7 @@ Default path:
 4. Send blocking defects to `needs-fix`.
 5. If hosted checks are pending, leave the PR non-terminal for a later tick.
 6. If hosted checks fail and are not a known default-branch baseline failure, send the PR to `needs-fix`.
-7. If proof passes and the head is clean after host-state classification, converge to `ready-for-human` — no fix cycle is forced.
-8. At evidence threshold, open a tiny playbook-suggestion PR.
-9. Exit after one PR.
+7. If hosted checks fail only where the default branch is already red, converge to `ready-for-human-baseline-red`.
+8. If proof passes and the head is clean after host-state classification, converge to `ready-for-human`; no fix cycle is forced.
+9. At evidence threshold, open a tiny playbook-suggestion PR.
+10. Exit after one PR.

@@ -3,7 +3,7 @@
 V1 runs one local foreground supervisor. It claims trusted GitHub issues labeled
 `ready`, opens proven PRs, reviews them, classifies hosted checks and external
 inline bot feedback, fixes blockers when needed, and stops at `ready-for-human`
-for your final review.
+or `ready-for-human-baseline-red` for your final review.
 
 ## The Short Path
 
@@ -14,7 +14,8 @@ for your final review.
 5. Run the doctor check.
 6. Create one tiny trusted issue and add `ready`.
 7. Run one supervisor tick.
-8. Review the resulting PR when it reaches `ready-for-human`.
+8. Review the resulting PR when it reaches `ready-for-human` or
+   `ready-for-human-baseline-red`.
 
 ## 1. Install Prerequisites
 
@@ -116,7 +117,8 @@ The helper is idempotent. It creates or updates:
 | `ready` | Trusted work is available |
 | `in-progress` | The loop claimed the work |
 | `needs-fix` | Proof or review found a code blocker |
-| `ready-for-human` | Proof, hosted checks, and review converged |
+| `ready-for-human` | Proof, green hosted checks, and review converged |
+| `ready-for-human-baseline-red` | Proof and review converged; hosted failures match the default branch baseline |
 | `unproven` | No accepted proof command exists |
 | `did-not-converge` | Review/fix cycle cap was reached |
 | `stalled` | Runtime wall, retry wall, or local harness/setup blocker was reached |
@@ -183,6 +185,12 @@ Expected clean path:
 
 ```text
 ready -> in-progress -> ready-for-human
+```
+
+Expected baseline-red path:
+
+```text
+ready -> in-progress -> ready-for-human-baseline-red
 ```
 
 Expected fix path:

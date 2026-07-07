@@ -186,7 +186,7 @@ else
 fi
 
 if have gh && gh auth status >/dev/null 2>&1 && gh repo view --json nameWithOwner >/dev/null 2>&1; then
-  required_labels="ready in-progress needs-fix ready-for-human unproven did-not-converge stalled"
+  required_labels="ready in-progress needs-fix ready-for-human ready-for-human-baseline-red unproven did-not-converge stalled"
   for label in $required_labels; do
     if gh label list --json name --jq '.[].name' | grep -Fx "$label" >/dev/null 2>&1; then
       ok "label exists: $label"

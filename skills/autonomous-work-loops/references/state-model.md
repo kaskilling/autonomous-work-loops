@@ -11,9 +11,10 @@ Required coarse labels:
 - `ready`: trusted work is available for implementer intake.
 - `in-progress`: claimed or under active loop work.
 - `needs-fix`: reviewer found defects or proof failed.
-- `ready-for-human`: autonomous loop has reached a human handoff after configured local proof, autonomous review, external inline bot review intake, and hosted-check classification.
+- `ready-for-human`: autonomous loop has reached a human handoff after configured local proof, autonomous review, external inline bot review intake, and green hosted-check classification.
+- `ready-for-human-baseline-red`: autonomous loop has reached a human handoff after configured local proof and autonomous review, but hosted failures match checks already failing on the default branch.
 
-Terminal outcome labels (each is its own label, never co-applied with `ready-for-human`, so the board is filterable and `ready-for-human` alone always means "proven and converged"):
+Terminal outcome labels (each is its own label, never co-applied with a human-handoff label, so the board is filterable and handoff labels always mean "locally proven and reviewed"):
 
 - `unproven`: proof is absent, the proof command itself was invented or changed by the agent and not yet human accepted, or objective proof cannot be run.
 - `did-not-converge`: cycle cap reached with blocking defects.
@@ -38,6 +39,7 @@ Recommended verdicts:
 - `needs-fix`
 - `fixed`
 - `ready-for-human`
+- `ready-for-human-baseline-red`
 - `unproven`
 - `did-not-converge`
 - `stalled`
