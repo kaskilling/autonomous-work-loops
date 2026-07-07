@@ -210,6 +210,7 @@ def package_script_command(manager: str, script: str) -> str:
 
 proof = {"test": "", "build": "", "lint": ""}
 proof_sources = {"test": "", "build": "", "lint": ""}
+proof_notes = []
 package_json_path = target / "package.json"
 if package_json_path.exists():
     try:
@@ -221,6 +222,20 @@ if package_json_path.exists():
                 if isinstance(scripts.get(key), str) and scripts[key].strip():
                     proof[key] = package_script_command(manager, key)
                     proof_sources[key] = f"package.json scripts.{key}"
+            test_script = str(scripts.get("test", ""))
+            unit_script = scripts.get("test:unit")
+            if (
+                isinstance(unit_script, str)
+                and unit_script.strip()
+                and proof["test"]
+                and re.search(r"\b(e2e|playwright|browser|headed)\b", test_script, re.IGNORECASE)
+            ):
+                full_test = proof["test"]
+                proof["test"] = package_script_command(manager, "test:unit")
+                proof_sources["test"] = "package.json scripts.test:unit (first-smoke default)"
+                proof_notes.append(
+                    f"Full test candidate: {full_test} (package.json scripts.test includes browser/e2e work)."
+                )
     except json.JSONDecodeError:
         pass
 
@@ -298,6 +313,7 @@ proof_lines = "\n".join(
     + (f" ({proof_sources[key]})" if proof_sources[key] else "")
     for key in ("test", "build", "lint")
 )
+proof_note_lines = "\n".join(f"  - {item}" for item in proof_notes) or "  - (none)"
 instruction_lines = "\n".join(f"  - {item}" for item in instructions) or "  - (none discovered)"
 
 missing_proof = [key for key, value in proof.items() if not value]
@@ -329,6 +345,8 @@ report = f"""# Autonomous Work Loops Bootstrap Report
 - Required labels: not mutated; run `.agent-loops/setup-labels.sh`
 - Proof commands:
 {proof_lines}
+- Proof notes:
+{proof_note_lines}
 - Context:
   - repo instructions:
 {instruction_lines}
@@ -341,6 +359,9 @@ report = f"""# Autonomous Work Loops Bootstrap Report
   - repo-specific rules: read discovered instruction files before every tick
 - Doctor: run `.agent-loops/doctor.sh` after labels exist and before arming the supervisor
 - First trial issue: `.agent-loops/FIRST-TRIAL-ISSUE.md`
+- First trial command:
+  - `gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready`
+  - `.agent-loops/runners/local-supervisor.sh "$PWD"`
 - Runner: local foreground supervisor at `.agent-loops/runners/local-supervisor.sh`
   - shared guarded runner body: `.agent-loops/runners/guarded-role-runner-common.sh`
 - Credentials: runner uses local shell credentials; bootstrap did not install cron, launchd, Actions schedules, Codex Automations, or Claude `/loop`
@@ -366,6 +387,22 @@ fi
 mv "$tmp" "$dest"
 trap - EXIT
 
+if git -C "$target" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git_dir="$(git -C "$target" rev-parse --absolute-git-dir)"
+  exclude_file="${git_dir}/info/exclude"
+  mkdir -p "$(dirname "$exclude_file")"
+  touch "$exclude_file"
+  if ! grep -Fxq ".agent-loops/" "$exclude_file"; then
+    printf '\n%s\n' "# autonomous-work-loops local runtime files" >> "$exclude_file"
+    printf '%s\n' ".agent-loops/" >> "$exclude_file"
+  fi
+  if ! grep -Fxq ".agent-loops.tmp.*/" "$exclude_file"; then
+    printf '%s\n' ".agent-loops.tmp.*/" >> "$exclude_file"
+  fi
+fi
+
 printf 'bootstrapped %s\n' "$dest"
 printf 'next: run %s\n' "${dest}/setup-labels.sh"
 printf 'then: run %s\n' "${dest}/doctor.sh"
+printf 'first trial: gh issue create --title "%s" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready\n' "Add one tiny tested change to prove autonomous-work-loops is wired correctly"
+printf 'start: %s "$PWD"\n' "${dest}/runners/local-supervisor.sh"

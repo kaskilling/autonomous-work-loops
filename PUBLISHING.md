@@ -114,7 +114,7 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 
 ## Versioning
 
-- `plugin.json` is at `0.1.0`. Bump to `1.0.0` only after the acceptance test passes on ≥2 real repos.
+- `plugin.json` is at `0.1.1`. Bump to `1.0.0` only after the acceptance test passes on ≥2 real repos.
 - Marketplace entries should pin a `sha`, not a moving `ref`, given the autonomy/credential surface — users should opt into updates deliberately.
 
 ## Marketing: lead with the differentiator, not the novelty

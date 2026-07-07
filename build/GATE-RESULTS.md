@@ -1,6 +1,6 @@
 # Gate Results
 
-Validation dates: 2026-06-27, retests 2026-06-28, guarded-runner release-blocker validation 2026-06-29, V1 runner-surface validation 2026-06-29, Claude `/loop` and Codex Automation reruns 2026-07-02, foreground-only V1 simplification 2026-07-02, release-candidate install and live-smoke validation 2026-07-06
+Validation dates: 2026-06-27, retests 2026-06-28, guarded-runner release-blocker validation 2026-06-29, V1 runner-surface validation 2026-06-29, Claude `/loop` and Codex Automation reruns 2026-07-02, foreground-only V1 simplification 2026-07-02, release-candidate install and live-smoke validation 2026-07-06, planning-poker setup UX fixes 2026-07-07
 
 ## Smoke Set Verdict
 
@@ -51,10 +51,11 @@ The author-only strict gate now holds in both directions, and the guarded runner
 | V1 Codex plugin clean install | release packaging | PASS | Clean temp `HOME` added a local marketplace entry and installed `autonomous-work-loops@awl-local-proof`; `codex plugin list` showed version `0.1.0` installed and enabled |
 | V1 Claude plugin clean install | release packaging | PASS | `claude plugin validate`, marketplace add, plugin install, plugin details, and JSON list passed from a clean temp `HOME`; details showed the `autonomous-work-loops` skill |
 | V1 public-clone fresh live smoke | release packaging/runner surface | PASS WITH CAVEAT | Fresh public clone bootstrapped private repo `kaskilling/awl-live-smoke-20260706`; issue #1 -> PR #2; implementer marker `proof-passed`; reviewer marker `ready-for-human`; PR and issue labeled `ready-for-human`; `npm test` passed. Initial Codex role-runner attempt hit local Codex state/app-server permission blockers, then the supervisor recovered and converged with the generated Claude role runner. This run exposed and fixed `setup-labels.sh` no-arg handling in commit `9afd09f` |
+| V1 planning-poker setup UX | setup/UX | PASS | User trial on `katooling/planning-poker` exposed four DX gaps: `.agent-loops/` was staged into PR #5, supervisor output looked idle after claim, broad `npm test` was too heavy for first smoke, and local Playwright harness failures routed to `needs-fix`. `v0.1.1` fixes the defaults: bootstrap writes `.agent-loops/` to target `.git/info/exclude`, runner staging hard-skips `.agent-loops/`, supervisor prints role/proof/log progress, Playwright-style packages prefer `test:unit` as first-smoke proof, and setup/harness proof blockers route to `stalled`. Fixture `/private/tmp/awl-bootstrap-proof` proved the generated config uses `npm run test:unit`, the target `.git/info/exclude` ignores `.agent-loops/`, generated scripts pass `bash -n`, `build/harness/check-packaging.sh` passes, and `quick_validate.py` passes |
 
 ## Next Validation Step
 
-Manual user trial is ready on the local foreground supervisor path from the public repo and, after tagging, from `v0.1.0`. Codex Automations and Claude `/loop` should not be documented or generated as V1 setup paths. The author-only strict rejection evidence from T2/T3/T4 is accepted for `87ff8c3`; do not reopen it unless strict-trust semantics change.
+Manual user trial is ready on the local foreground supervisor path from the public repo and, after tagging, from `v0.1.1`. Codex Automations and Claude `/loop` should not be documented or generated as V1 setup paths. The author-only strict rejection evidence from T2/T3/T4 is accepted for `87ff8c3`; do not reopen it unless strict-trust semantics change.
 
 Do not return to the unguarded nested runner path: `codex exec -s workspace-write -c approval_policy="never"` can read host state and post markers, but cannot perform the Git claim because `.git/FETCH_HEAD` is auto-protected in this environment. The guarded runner is now the default Codex path. If a clean temp-home smoke hits local Codex app-server or state database permission blockers, use the generated Claude role runner or another compatible role runner surface; keep the parent supervisor path unchanged.
 

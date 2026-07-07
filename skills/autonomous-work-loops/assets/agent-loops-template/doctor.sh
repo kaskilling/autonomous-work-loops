@@ -31,6 +31,11 @@ config=".agent-loops/config.yaml"
 
 if [ -d .git ]; then
   ok "git repo found"
+  if git check-ignore -q .agent-loops/BOOTSTRAP-REPORT.md >/dev/null 2>&1; then
+    ok ".agent-loops is ignored by git"
+  else
+    warn ".agent-loops is not ignored by git; rerun bootstrap or add .agent-loops/ to .git/info/exclude"
+  fi
 else
   fail "run from the target repo root, or pass the repo path as the first argument"
 fi

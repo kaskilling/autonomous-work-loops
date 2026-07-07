@@ -16,10 +16,12 @@ Acceptance criteria:
 - Add or update one small test, fixture, or documentation check.
 - Run the configured proof command.
 - Open exactly one PR from a `loop/impl/issue-<number>` branch.
-- Do not include `.agent-loops/evidence/` logs in the PR diff.
+- Do not include `.agent-loops/` files or logs in the PR diff.
 
 Notes:
 
 - Keep the change intentionally small.
+- The first configured proof may be a fast smoke proof. A broader release proof
+  can be configured after the loop is proven on this repo.
 - If there is no good tiny code change, improve one README sentence and run the configured proof command.
 - Stop with `unproven` if no proof command is configured.

@@ -68,6 +68,10 @@ Then run the generated setup checks:
 .agent-loops/doctor.sh
 ```
 
+Bootstrap also adds `.agent-loops/` to the target repo's local
+`.git/info/exclude`. Loop runtime files stay local by default and should not
+appear in implementation PRs.
+
 Start the local supervisor and leave the terminal open:
 
 ```sh
@@ -93,17 +97,22 @@ starting the supervisor:
 If there is no proof command, the loop must stop at `unproven`. Passing proof is
 the main safety gate.
 
+For repositories where `npm test` includes browser or E2E work and
+`test:unit` exists, bootstrap starts with the unit script as the first-smoke
+proof and records the broader test command in the Bootstrap Report. Promote to
+the broader proof after the loop is proven on that repo.
+
 ## Label Control Panel
 
 | Label | Meaning | What you do |
 |---|---|---|
 | `ready` | Trusted issue is available for the loop | You apply this |
 | `in-progress` | The loop claimed the issue or PR | Wait or inspect |
-| `needs-fix` | Review or proof found a blocker | Wait or inspect |
+| `needs-fix` | Review or proof found a code blocker | Wait or inspect |
 | `ready-for-human` | Proof and autonomous review converged | Review and merge |
 | `unproven` | No accepted proof command is configured | Fix setup or handle manually |
 | `did-not-converge` | Review/fix cycle cap was reached | Human review needed |
-| `stalled` | Runtime or retry wall was reached | Inspect logs and runner state |
+| `stalled` | Runtime wall, retry wall, or local harness/setup blocker was reached | Inspect logs and runner state |
 
 Typical paths:
 

@@ -79,9 +79,16 @@ starting the supervisor. The script refuses to overwrite an existing
 `.agent-loops/` unless you pass `--force`, and it refuses non-GitHub or non-git
 targets unless you pass `--allow-incomplete` for manual scaffolding.
 
+Bootstrap adds `.agent-loops/` and `.agent-loops.tmp.*/` to the target repo's
+local `.git/info/exclude`. You should not need to mention AWL files in issues;
+the runner also refuses to stage `.agent-loops/` files.
+
 Confirm these fields in `.agent-loops/config.yaml`:
 
-- `proof`: at least one accepted test, build, or lint command.
+- `proof`: at least one accepted test, build, or lint command. For repos where
+  `npm test` includes Playwright/E2E and `test:unit` exists, bootstrap uses the
+  unit script as the first-smoke default and records the broader test command in
+  `.agent-loops/BOOTSTRAP-REPORT.md`.
 - `trusted_actors`: includes the GitHub user who will author executable issues.
 - `trust_posture`: use `strict` for public or multi-contributor repos.
 - `labels`: keep defaults unless the repo already has a deliberate label scheme.
@@ -100,11 +107,11 @@ The helper is idempotent. It creates or updates:
 |---|---|
 | `ready` | Trusted work is available |
 | `in-progress` | The loop claimed the work |
-| `needs-fix` | Proof or review found a blocker |
+| `needs-fix` | Proof or review found a code blocker |
 | `ready-for-human` | Proof and review converged |
 | `unproven` | No accepted proof command exists |
 | `did-not-converge` | Review/fix cycle cap was reached |
-| `stalled` | Runtime or retry wall was reached |
+| `stalled` | Runtime wall, retry wall, or local harness/setup blocker was reached |
 
 ## 5. Run Doctor
 
@@ -183,7 +190,7 @@ After the trial, confirm:
 - Exactly one `loop/impl/issue-<number>` branch was created.
 - Exactly one PR was opened for the issue.
 - The PR body or comments include proof markers.
-- `.agent-loops/evidence/` logs are not in the PR diff.
+- `.agent-loops/` files are not in the PR diff.
 
 ## Manual Debug Ticks
 

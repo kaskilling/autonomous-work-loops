@@ -118,6 +118,10 @@ kill_retries="${kill_retries:-2}"
 
 ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
+say() {
+  printf '[%s] %s\n' "$(ts)" "$*"
+}
+
 trusted_actor() {
   local actor="$1"
   if [ "$trust_posture" != "strict" ]; then
@@ -168,6 +172,24 @@ run_proof() {
     } >>"$log" 2>&1 || return 1
   done
   [ "$any" = 1 ] || return 2
+}
+
+proof_setup_blocker() {
+  local log="$1"
+  grep -Eiq "Address already in use|EADDRINUSE|Process from config\.webServer was not able to start|browserType\.launch: Executable does not exist|browserType\.launch: Executable doesn't exist|Executable does not exist at|Executable doesn't exist at|gh is not authenticated|could not resolve host|ENOTFOUND|ECONNREFUSED|ECONNRESET|permission denied|Operation not permitted" "$log"
+}
+
+proof_summary() {
+  local log="$1" rc="$2"
+  if [ "$rc" = 0 ]; then
+    printf 'proof passed; see %s\n' "$log"
+  elif [ "$rc" = 2 ]; then
+    printf 'proof missing; no configured proof command\n'
+  elif proof_setup_blocker "$log"; then
+    printf 'proof blocked by local setup/harness; see %s\n' "$log"
+  else
+    printf 'proof failed; see %s\n' "$log"
+  fi
 }
 
 post_pr_marker() {
@@ -294,7 +316,10 @@ stage_non_generated() {
   python3 - <<'PY' | while IFS= read -r path; do git add "$path"; done
 import subprocess
 skip = ("/__pycache__/", "__pycache__/", ".pyc")
-skip_prefixes = (".agent-loops/evidence/",)
+skip_prefixes = (
+    ".agent-loops/",
+    ".agent-loops.tmp.",
+)
 out = subprocess.check_output(["git", "status", "--porcelain"], text=True)
 for line in out.splitlines():
     if not line:
@@ -450,6 +475,7 @@ Stale in-progress claim detected with no claim branch. Releasing the advisory la
       fi
       gh issue edit "$issue" --repo "$repo_slug" --remove-label "$label_ready" --add-label "$label_in_progress" >/dev/null
     fi
+    say "claimed issue #${issue} on ${branch}"
 
     body="$(gh issue view "$issue" --repo "$repo_slug" --json body --jq .body)"
     log="$raw/logs/guarded-implementer-$(date -u +%Y%m%d-%H%M%S)-issue-${issue}.log"
@@ -467,6 +493,7 @@ Before editing, use targeted file reads or rg from the repository root to inspec
 Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Do not edit .agent-loops unless the issue explicitly requires it. Implement the smallest complete change and exit."
     prompt_log="${log%.log}-prompt.log"
     printf '%s\n' "$prompt" >"$prompt_log"
+    say "running implementer for issue #${issue}; log: ${log}"
     set +e
     run_nested_agent workspace-write "$prompt" "$log"
     local codex_rc=$?
@@ -478,10 +505,12 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     fi
 
     proof_log="$raw/logs/guarded-proof-$(date -u +%Y%m%d-%H%M%S)-issue-${issue}.log"
+    say "running proof for issue #${issue}; log: ${proof_log}"
     set +e
     run_proof "$proof_log"
     proof_rc=$?
     set -e
+    say "$(proof_summary "$proof_log" "$proof_rc")"
 
     stage_non_generated
     if git diff --cached --quiet; then
@@ -492,6 +521,7 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     head_sha="$(git rev-parse HEAD)"
     git push origin "HEAD:refs/heads/${branch}"
 
+    say "opening or updating PR for issue #${issue}"
     pr_body="$(mktemp)"
     {
       printf 'Closes #%s.\n\n' "$issue"
@@ -506,6 +536,7 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     } > "$pr_body"
     pr="$(open_or_update_pr "$issue" "$branch" "$title" "$pr_body")"
     rm -f "$pr_body"
+    say "opened or updated PR #${pr} for issue #${issue}"
 
     if [ "$proof_rc" = 0 ]; then
       post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-passed cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}. Prompt: ${prompt_log}. Proof passed; see ${proof_log}."
@@ -513,6 +544,10 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
       post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=unproven cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but no proof command is configured. Prompt: ${prompt_log}."
       set_issue_state "$issue" "$repo_slug" "$label_unproven"
       set_pr_state "$pr" "$repo_slug" "$label_unproven"
+    elif proof_setup_blocker "$proof_log"; then
+      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=stalled cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but proof is blocked by local setup or harness state. Prompt: ${prompt_log}. Proof: ${proof_log}."
+      set_issue_state "$issue" "$repo_slug" "$label_stalled"
+      set_pr_state "$pr" "$repo_slug" "$label_stalled"
     else
       post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-failed cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but proof failed. Prompt: ${prompt_log}. Proof: ${proof_log}."
       set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
@@ -551,12 +586,15 @@ reviewer() {
     cycle="$(latest_cycle "$pr" "$repo_slug")"
     cycle="${cycle:-0}"
     proof_log="$raw/logs/guarded-review-proof-$(date -u +%Y%m%d-%H%M%S)-pr-${pr}.log"
+    say "running reviewer proof for PR #${pr}; log: ${proof_log}"
     set +e
     run_proof "$proof_log"
     proof_rc=$?
     set -e
+    say "$(proof_summary "$proof_log" "$proof_rc")"
     if [ "$proof_rc" = 0 ]; then
       review_log="$raw/logs/guarded-review-$(date -u +%Y%m%d-%H%M%S)-pr-${pr}.log"
+      say "running reviewer for PR #${pr}; log: ${review_log}"
       set +e
       run_nested_review "$pr" "$repo_slug" "$head" "$proof_log" "$review_log" "$proof_rc"
       review_rc=$?
@@ -590,6 +628,11 @@ reviewer() {
       set_pr_state "$pr" "$repo_slug" "$label_unproven"
       issue="$(pr_issue_number "$pr" "$repo_slug" "$branch")"
       [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_unproven"
+    elif proof_setup_blocker "$proof_log"; then
+      post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "Guarded reviewer proof is blocked by local setup or harness state; see ${proof_log}."
+      set_pr_state "$pr" "$repo_slug" "$label_stalled"
+      issue="$(pr_issue_number "$pr" "$repo_slug" "$branch")"
+      [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_stalled"
     else
       if [ "$cycle" -ge "$max_cycles" ]; then
         post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=did-not-converge cycle=${cycle} ts=$(ts) -->" "Proof still fails at the cycle cap; see ${proof_log}."
@@ -657,6 +700,7 @@ Before editing, use targeted file reads or rg from the repository root to inspec
 Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Fix the blocking defects needed for this cycle and exit."
     prompt_log="${log%.log}-prompt.log"
     printf '%s\n' "$prompt" >"$prompt_log"
+    say "running fixer for PR #${pr}; log: ${log}"
     set +e
     run_nested_agent workspace-write "$prompt" "$log"
     local codex_rc=$?
@@ -668,10 +712,12 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     fi
 
     proof_log="$raw/logs/guarded-fixer-proof-$(date -u +%Y%m%d-%H%M%S)-pr-${pr}.log"
+    say "running fixer proof for PR #${pr}; log: ${proof_log}"
     set +e
     run_proof "$proof_log"
     proof_rc=$?
     set -e
+    say "$(proof_summary "$proof_log" "$proof_rc")"
 
     stage_non_generated
     if ! git diff --cached --quiet; then
@@ -688,6 +734,10 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
       post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=unproven cycle=${cycle} ts=$(ts) -->" "Guarded fixer found no configured proof command."
       set_pr_state "$pr" "$repo_slug" "$label_unproven"
       [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_unproven"
+    elif proof_setup_blocker "$proof_log"; then
+      post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "Guarded fixer proof is blocked by local setup or harness state; see ${proof_log}."
+      set_pr_state "$pr" "$repo_slug" "$label_stalled"
+      [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_stalled"
     else
       body_tail="$(tail -40 "$proof_log" | sed 's/^/- /')"
       if [ "$cycle" -ge "$max_cycles" ]; then
