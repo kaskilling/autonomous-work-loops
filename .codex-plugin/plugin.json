@@ -1,6 +1,6 @@
 {
   "name": "autonomous-work-loops",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Bootstrap and run a reviewed, converging implement/review/fix PR loop for trusted GitHub issues.",
   "author": {
     "name": "mkamar"
@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "Autonomous Work Loops",
     "shortDescription": "Turn trusted GitHub issues into proven, reviewed PRs.",
-    "longDescription": "Bootstrap a target GitHub repo with local foreground runners that claim trusted ready issues, implement changes, run proof, review the PR, fix blockers, and hand the result to a human for final merge.",
+    "longDescription": "Bootstrap a target GitHub repo with local foreground runners that claim trusted ready issues, implement changes, run proof, wait for hosted checks, ingest inline bot review feedback, fix blockers, and hand the result to a human for final merge.",
     "developerName": "mkamar",
     "category": "Developer Tools",
     "capabilities": [

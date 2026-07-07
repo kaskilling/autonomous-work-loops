@@ -3,7 +3,7 @@
 This skill bootstraps a target GitHub repo with a local foreground loop:
 
 1. an implementer claims trusted `ready` issues and opens proven PRs
-2. a reviewer checks proof, diff, and acceptance criteria
+2. a reviewer checks proof, diff, hosted checks, external inline bot comments, and acceptance criteria
 3. a fixer handles blocking review feedback when needed
 4. the loop stops at `ready-for-human` for human review and merge
 
@@ -26,7 +26,13 @@ From the target GitHub repo:
 <skill-root>/assets/bootstrap.sh "$PWD"
 .agent-loops/setup-labels.sh
 .agent-loops/doctor.sh
-.agent-loops/runners/local-supervisor.sh "$PWD"
+.agent-loops/runners/local-supervisor.sh --once "$PWD"
+```
+
+For a guided first run:
+
+```sh
+<skill-root>/assets/bootstrap.sh --guided "$PWD"
 ```
 
 Create a small issue from `.agent-loops/FIRST-TRIAL-ISSUE.md`, then add the

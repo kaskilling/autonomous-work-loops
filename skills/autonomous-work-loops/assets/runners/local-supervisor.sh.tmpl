@@ -1,14 +1,67 @@
 #!/usr/bin/env bash
 # Local foreground supervisor for autonomous-work-loops.
-# Start this once in a terminal and leave it running. It is not a daemon and it
-# does not install cron, launchd, or other persistent scheduler entries.
+# Runs one visible tick by default. Pass --watch to keep polling in this
+# terminal. It is not a daemon and it does not install cron, launchd, or other
+# persistent scheduler entries.
 set -euo pipefail
 
-repo="${1:-}"
-[ -n "$repo" ] || repo="{{repo_path}}"
+usage() {
+  cat <<'EOF'
+Usage: local-supervisor.sh [--once] [--watch] [--interval seconds] [repo]
+
+Defaults:
+  --once       run implementer, reviewer, and fixer once, then exit
+  repo         rendered bootstrap repo path
+
+Options:
+  --watch      keep polling after each tick
+  --interval   polling interval for --watch; default 600
+  -h, --help   show this help
+EOF
+}
+
+mode=once
 interval_seconds="${AWL_SUPERVISOR_INTERVAL_SECONDS:-}"
 [ -n "$interval_seconds" ] || interval_seconds="{{interval_seconds}}"
 case "$interval_seconds" in ""|*"{{"*) interval_seconds=600 ;; esac
+repo=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --once)
+      mode=once
+      shift
+      ;;
+    --watch)
+      mode=watch
+      shift
+      ;;
+    --interval)
+      [ "$#" -ge 2 ] || { echo "--interval requires seconds" >&2; exit 2; }
+      interval_seconds="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      repo="$1"
+      shift
+      ;;
+  esac
+done
+
+[ -n "$repo" ] || repo="{{repo_path}}"
 
 runner="${AWL_ROLE_RUNNER:-}"
 if [ -z "$runner" ]; then
@@ -28,7 +81,7 @@ if [ ! -x "$runner" ]; then
   exit 1
 fi
 
-while true; do
+run_tick() {
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   echo "[$ts] autonomous-work-loops supervisor tick"
 
@@ -38,7 +91,17 @@ while true; do
   "$runner" "$repo" reviewer || true
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] role: fixer"
   "$runner" "$repo" fixer || true
+}
 
+run_tick
+
+if [ "$mode" != "watch" ]; then
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] one-shot tick complete"
+  exit 0
+fi
+
+while true; do
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] sleeping ${interval_seconds}s"
   sleep "$interval_seconds"
+  run_tick
 done

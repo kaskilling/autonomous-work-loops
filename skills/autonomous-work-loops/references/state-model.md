@@ -11,7 +11,7 @@ Required coarse labels:
 - `ready`: trusted work is available for implementer intake.
 - `in-progress`: claimed or under active loop work.
 - `needs-fix`: reviewer found defects or proof failed.
-- `ready-for-human`: autonomous loop has reached a human handoff.
+- `ready-for-human`: autonomous loop has reached a human handoff after configured local proof, autonomous review, external inline bot review intake, and hosted-check classification.
 
 Terminal outcome labels (each is its own label, never co-applied with `ready-for-human`, so the board is filterable and `ready-for-human` alone always means "proven and converged"):
 
@@ -41,6 +41,7 @@ Recommended verdicts:
 - `unproven`
 - `did-not-converge`
 - `stalled`
+- `checks-pending`
 - `no-op`
 
 ## Idempotence Rule

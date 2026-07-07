@@ -32,6 +32,7 @@ budgets:
   max_runtime_minutes_per_loop: 30
   max_changed_files_without_human_review: 20
   kill_retries: 2
+  hosted_check_wait_seconds: 420
   require_human_approval_for_budget_increase: true
 
 # v2 evolution.enabled: false

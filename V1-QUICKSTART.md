@@ -1,8 +1,9 @@
 # V1 Quickstart
 
-V1 runs one local foreground supervisor. It watches trusted GitHub issues labeled
-`ready`, opens proven PRs, reviews them, fixes blockers when needed, and stops at
-`ready-for-human` for your final review.
+V1 runs one local foreground supervisor. It claims trusted GitHub issues labeled
+`ready`, opens proven PRs, reviews them, classifies hosted checks and external
+inline bot feedback, fixes blockers when needed, and stops at `ready-for-human`
+for your final review.
 
 ## The Short Path
 
@@ -11,8 +12,8 @@ V1 runs one local foreground supervisor. It watches trusted GitHub issues labele
 3. Bootstrap one target GitHub repo.
 4. Create labels.
 5. Run the doctor check.
-6. Start the supervisor.
-7. Create one tiny trusted issue and add `ready`.
+6. Create one tiny trusted issue and add `ready`.
+7. Run one supervisor tick.
 8. Review the resulting PR when it reaches `ready-for-human`.
 
 ## 1. Install Prerequisites
@@ -62,6 +63,13 @@ Run deterministic bootstrap:
 /path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
 ```
 
+Or run the guided first setup, which creates labels, runs doctor, creates the
+smoke issue, and runs one one-shot supervisor tick:
+
+```sh
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh --guided "$PWD"
+```
+
 Or invoke the skill in Codex or Claude for agent-guided setup:
 
 ```text
@@ -108,7 +116,7 @@ The helper is idempotent. It creates or updates:
 | `ready` | Trusted work is available |
 | `in-progress` | The loop claimed the work |
 | `needs-fix` | Proof or review found a code blocker |
-| `ready-for-human` | Proof and review converged |
+| `ready-for-human` | Proof, hosted checks, and review converged |
 | `unproven` | No accepted proof command exists |
 | `did-not-converge` | Review/fix cycle cap was reached |
 | `stalled` | Runtime wall, retry wall, or local harness/setup blocker was reached |
@@ -128,36 +136,7 @@ safe for a trial, but the `timeout`/`gtimeout` warning is worth fixing on macOS:
 brew install coreutils
 ```
 
-## 6. Start The Supervisor
-
-Start this in one visible terminal and leave it running:
-
-```sh
-.agent-loops/runners/local-supervisor.sh "$PWD"
-```
-
-Stop it with `Ctrl-C`.
-
-The supervisor runs the roles in order:
-
-```text
-implementer -> reviewer -> fixer
-```
-
-It sleeps between ticks. Override the interval only when you are deliberately
-testing cadence:
-
-```sh
-AWL_SUPERVISOR_INTERVAL_SECONDS=60 .agent-loops/runners/local-supervisor.sh "$PWD"
-```
-
-Override the role runner only when auto-detection is wrong:
-
-```sh
-AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh "$PWD"
-```
-
-## 7. Run The First Trial
+## 6. Run The First Trial
 
 Use the generated issue body:
 
@@ -166,6 +145,39 @@ cat .agent-loops/FIRST-TRIAL-ISSUE.md
 ```
 
 Create a GitHub issue from that template as a trusted actor, then apply `ready`.
+
+## 7. Run One Supervisor Tick
+
+Run this in one visible terminal:
+
+```sh
+.agent-loops/runners/local-supervisor.sh --once "$PWD"
+```
+
+The supervisor runs the roles in order:
+
+```text
+implementer -> reviewer -> fixer
+```
+
+It exits after one pass by default. Use explicit watch mode only after the smoke
+test is proven:
+
+```sh
+.agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"
+```
+
+Override the interval only when you are deliberately testing cadence:
+
+```sh
+AWL_SUPERVISOR_INTERVAL_SECONDS=60 .agent-loops/runners/local-supervisor.sh --watch "$PWD"
+```
+
+Override the role runner only when auto-detection is wrong:
+
+```sh
+AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh --once "$PWD"
+```
 
 Expected clean path:
 

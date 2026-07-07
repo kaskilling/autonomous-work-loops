@@ -34,6 +34,9 @@ requires changing them:
 - `.agent-loops/playbooks/`
 
 Implementation PRs should not include generated evidence logs.
+Local proof reports such as `playwright-report/` and `test-results/` are
+temporary runner artifacts; keep durable evidence under `.agent-loops/evidence/`
+or hosted CI artifacts.
 
 Useful setup helpers:
 

@@ -25,7 +25,7 @@ create_label() {
 create_label ready 0E8A16 "Trusted work ready for autonomous-work-loops intake"
 create_label in-progress FBCA04 "Autonomous-work-loops has claimed this work"
 create_label needs-fix D93F0B "Reviewer found blocking defects or proof failed"
-create_label ready-for-human 5319E7 "Proof passed and autonomous review converged"
+create_label ready-for-human 5319E7 "Proof, hosted checks, and autonomous review converged"
 create_label unproven BFDADC "No accepted proof command is configured or available"
 create_label did-not-converge B60205 "Review/fix cycle cap reached with blockers remaining"
 create_label stalled 000000 "Runner exceeded retry or runtime wall and needs a human"

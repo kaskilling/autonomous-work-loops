@@ -15,6 +15,7 @@ budgets:
   max_runtime_minutes_per_loop: 30
   max_changed_files_without_human_review: 20
   kill_retries: 2
+  hosted_check_wait_seconds: 420
   require_human_approval_for_budget_increase: true
 ```
 
@@ -23,6 +24,7 @@ budgets:
 - Active implementers, reviewers, and fixers: count labels, open branches, and active markers before starting work.
 - Reviewer/fixer cycle cap: read marker `cycle=<n>`.
 - Changed files: inspect the local diff summary before push or handoff.
+- Hosted check wait: before `ready-for-human`, wait up to `hosted_check_wait_seconds` for PR checks to leave pending state. If checks remain pending, post a `checks-pending` marker and retry on a later tick instead of handing off.
 - Budget increases: require explicit human approval and record it in the host conversation or PR.
 
 ## Runner-Enforced Limits

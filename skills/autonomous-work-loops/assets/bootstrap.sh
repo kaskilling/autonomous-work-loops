@@ -4,7 +4,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: bootstrap.sh [--force] [--allow-incomplete] [target-repo]
+Usage: bootstrap.sh [--force] [--guided] [--allow-incomplete] [target-repo]
 
 Copies agent-loops-template into <target-repo>/.agent-loops, renders local
 runner scripts, fills conservative discovered defaults, and writes
@@ -15,12 +15,14 @@ Defaults:
 
 Options:
   --force             replace an existing .agent-loops directory
+  --guided            run labels, doctor, create the smoke issue, and run one tick
   --allow-incomplete  scaffold even when the target is not a GitHub git repo
   -h, --help          show this help
 EOF
 }
 
 force=0
+guided=0
 allow_incomplete=0
 target="${PWD}"
 
@@ -28,6 +30,10 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --force)
       force=1
+      shift
+      ;;
+    --guided)
+      guided=1
       shift
       ;;
     --allow-incomplete)
@@ -135,6 +141,7 @@ fi
 
 AWL_TARGET="$target" \
 AWL_TMP="$tmp" \
+AWL_ASSETS_DIR="$assets_dir" \
 AWL_RUNNER_TEMPLATES="$runner_template_dir" \
 AWL_GH_USER="$gh_user" \
 AWL_GH_STATUS="$gh_status" \
@@ -147,6 +154,7 @@ from pathlib import Path
 
 target = Path(os.environ["AWL_TARGET"])
 tmp = Path(os.environ["AWL_TMP"])
+assets_dir = Path(os.environ["AWL_ASSETS_DIR"])
 runner_templates = Path(os.environ["AWL_RUNNER_TEMPLATES"])
 gh_user = os.environ.get("AWL_GH_USER", "").strip()
 gh_status = os.environ.get("AWL_GH_STATUS", "")
@@ -360,8 +368,10 @@ report = f"""# Autonomous Work Loops Bootstrap Report
 - Doctor: run `.agent-loops/doctor.sh` after labels exist and before arming the supervisor
 - First trial issue: `.agent-loops/FIRST-TRIAL-ISSUE.md`
 - First trial command:
+  - one-command guided path: `{assets_dir}/bootstrap.sh --guided "{target}"`
   - `gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready`
-  - `.agent-loops/runners/local-supervisor.sh "$PWD"`
+  - `.agent-loops/runners/local-supervisor.sh --once "$PWD"`
+  - watch mode after the smoke test: `.agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"`
 - Runner: local foreground supervisor at `.agent-loops/runners/local-supervisor.sh`
   - shared guarded runner body: `.agent-loops/runners/guarded-role-runner-common.sh`
 - Credentials: runner uses local shell credentials; bootstrap did not install cron, launchd, Actions schedules, Codex Automations, or Claude `/loop`
@@ -402,7 +412,24 @@ if git -C "$target" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 printf 'bootstrapped %s\n' "$dest"
-printf 'next: run %s\n' "${dest}/setup-labels.sh"
-printf 'then: run %s\n' "${dest}/doctor.sh"
-printf 'first trial: gh issue create --title "%s" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready\n' "Add one tiny tested change to prove autonomous-work-loops is wired correctly"
-printf 'start: %s "$PWD"\n' "${dest}/runners/local-supervisor.sh"
+printf 'guided: %s --guided "%s"\n' "${assets_dir}/bootstrap.sh" "$target"
+printf 'manual labels: %s\n' "${dest}/setup-labels.sh"
+printf 'manual doctor: %s\n' "${dest}/doctor.sh"
+printf 'manual smoke issue: gh issue create --title "%s" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready\n' "Add one tiny tested change to prove autonomous-work-loops is wired correctly"
+printf 'manual one-shot: %s --once "$PWD"\n' "${dest}/runners/local-supervisor.sh"
+printf 'watch later: %s --watch --interval 600 "$PWD"\n' "${dest}/runners/local-supervisor.sh"
+
+if [ "$guided" -eq 1 ]; then
+  if [ "$allow_incomplete" -eq 1 ]; then
+    printf '--guided cannot run with --allow-incomplete because it mutates GitHub and starts a tick.\n' >&2
+    exit 2
+  fi
+  printf 'guided setup: creating/updating labels\n'
+  (cd "$target" && "$dest/setup-labels.sh")
+  printf 'guided setup: running doctor\n'
+  (cd "$target" && "$dest/doctor.sh")
+  printf 'guided setup: creating smoke issue\n'
+  (cd "$target" && gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready)
+  printf 'guided setup: running one supervisor tick\n'
+  (cd "$target" && "$dest/runners/local-supervisor.sh" --once "$target")
+fi

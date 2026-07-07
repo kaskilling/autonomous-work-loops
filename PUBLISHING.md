@@ -43,7 +43,7 @@ one external user and a pinned tag:
 
 1. Create a small repo with a real test command and 1-2 `ready` issues.
 2. Bootstrap: `/autonomous-work-loops`.
-3. Start the tested V1 runner surface: `.agent-loops/runners/local-supervisor.sh "$PWD"`.
+3. Start the tested V1 runner surface: `.agent-loops/runners/local-supervisor.sh --once "$PWD"`.
 4. Confirm: one `ready` issue -> claimed -> proven PR -> `ready-for-human`. A
    clean proven PR may converge on the first review; review->fix cycles happen
    only when defects are found.
@@ -114,7 +114,7 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 
 ## Versioning
 
-- `plugin.json` is at `0.1.1`. Bump to `1.0.0` only after the acceptance test passes on ≥2 real repos.
+- `plugin.json` is at `0.1.2`. Bump to `1.0.0` only after the acceptance test passes on ≥2 real repos.
 - Marketplace entries should pin a `sha`, not a moving `ref`, given the autonomy/credential surface — users should opt into updates deliberately.
 
 ## Marketing: lead with the differentiator, not the novelty

@@ -15,8 +15,9 @@ agent roles:
 2. **Reviewer** checks the proof, diff, and acceptance criteria.
 3. **Fixer** handles blocking review feedback when needed.
 
-When proof passes and review has no blocking findings, the PR is labeled
-`ready-for-human`. You still review and merge it yourself.
+When proof passes, hosted checks are classified, and review has no blocking
+findings, the PR is labeled `ready-for-human`. You still review and merge it
+yourself.
 
 V1 is local and GitHub-only. It is not a hosted bot, daemon, cron job, GitHub
 Action, Codex Automation, or Claude `/loop` scheduler.
@@ -49,6 +50,17 @@ cd /path/to/target-repo
 /path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
 ```
 
+For the easiest first run in a fresh target repo, use guided bootstrap. It
+creates or updates labels, runs doctor, creates the smoke issue, and runs one
+supervisor tick:
+
+```sh
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh --guided "$PWD"
+```
+
+If `.agent-loops/` already exists and you intentionally want to replace it, add
+`--force`.
+
 If you prefer agent-guided setup, ask Codex or Claude from the target repo:
 
 ```text
@@ -72,14 +84,20 @@ Bootstrap also adds `.agent-loops/` to the target repo's local
 `.git/info/exclude`. Loop runtime files stay local by default and should not
 appear in implementation PRs.
 
-Start the local supervisor and leave the terminal open:
+Run one local supervisor tick:
 
 ```sh
-.agent-loops/runners/local-supervisor.sh "$PWD"
+.agent-loops/runners/local-supervisor.sh --once "$PWD"
 ```
 
-Create a GitHub issue from `.agent-loops/FIRST-TRIAL-ISSUE.md`, then add the
-`ready` label. Watch the issue and PR labels move.
+Or watch continuously after the smoke test is proven:
+
+```sh
+.agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"
+```
+
+If no trusted ready issue exists, the supervisor prints the exact smoke-issue
+command to run from `.agent-loops/FIRST-TRIAL-ISSUE.md`.
 
 ## What You Need To Decide
 
@@ -109,7 +127,7 @@ the broader proof after the loop is proven on that repo.
 | `ready` | Trusted issue is available for the loop | You apply this |
 | `in-progress` | The loop claimed the issue or PR | Wait or inspect |
 | `needs-fix` | Review or proof found a code blocker | Wait or inspect |
-| `ready-for-human` | Proof and autonomous review converged | Review and merge |
+| `ready-for-human` | Proof, hosted checks, and autonomous review converged | Review and merge |
 | `unproven` | No accepted proof command is configured | Fix setup or handle manually |
 | `did-not-converge` | Review/fix cycle cap was reached | Human review needed |
 | `stalled` | Runtime wall, retry wall, or local harness/setup blocker was reached | Inspect logs and runner state |
@@ -184,7 +202,7 @@ V1 is implemented and tested on live private GitHub repos. The current happy
 path is the local foreground supervisor:
 
 ```sh
-.agent-loops/runners/local-supervisor.sh "$PWD"
+.agent-loops/runners/local-supervisor.sh --once "$PWD"
 ```
 
 The latest release-candidate smoke used a fresh public clone, clean agent homes,
