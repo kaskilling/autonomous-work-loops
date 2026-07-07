@@ -182,6 +182,11 @@ proof_setup_blocker() {
   grep -Eiq "Address already in use|EADDRINUSE|Process from config\.webServer was not able to start|browserType\.launch: Executable does not exist|browserType\.launch: Executable doesn't exist|Executable does not exist at|Executable doesn't exist at|gh is not authenticated|could not resolve host|ENOTFOUND|ECONNREFUSED|ECONNRESET|permission denied|Operation not permitted" "$log"
 }
 
+nested_agent_startup_blocker() {
+  local log="$1"
+  grep -Eiq "failed to initialize in-process app-server client|failed to open state db|attempt to write a readonly database|OAuth authorization required|Auth required|cannot create PATH aliases" "$log"
+}
+
 proof_summary() {
   local log="$1" rc="$2"
   if [ "$rc" = 0 ]; then
@@ -450,7 +455,7 @@ PY
 }
 
 wait_for_hosted_checks() {
-  local pr="$1" repo_slug="$2" deadline state report
+  local pr="$1" repo_slug="$2" deadline state report now remaining
   deadline=$(( $(date +%s) + hosted_check_wait_seconds ))
   while true; do
     report="$(hosted_check_report "$pr" "$repo_slug")"
@@ -463,7 +468,10 @@ wait_for_hosted_checks() {
       printf '%s\n' "$report"
       return 0
     fi
-    say "$(printf '%s\n' "$report" | sed -n '2p'); waiting before final handoff" >&2
+    now="$(date +%s)"
+    remaining=$((deadline - now))
+    [ "$remaining" -gt 0 ] || remaining=0
+    say "$(printf '%s\n' "$report" | sed -n '2p'); waiting before final handoff (${remaining}s left of ${hosted_check_wait_seconds}s budget)" >&2
     sleep 15
   done
 }
@@ -639,8 +647,14 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     local codex_rc=$?
     set -e
     if [ "$codex_rc" -ne 0 ]; then
-      handle_issue_timeout "$issue" "$repo_slug" "$branch" implementer
-      echo "guarded implementer failed or timed out for issue #${issue}; rc=${codex_rc}; see ${log}"
+      if nested_agent_startup_blocker "$log"; then
+        post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=startup verdict=stalled cycle=0 ts=$(ts) -->" "Guarded implementer could not start the nested agent. Use another generated runner with AWL_ROLE_RUNNER or fix the local agent runtime. Log: ${log}."
+        set_issue_state "$issue" "$repo_slug" "$label_stalled"
+        echo "guarded implementer could not start nested agent for issue #${issue}; rc=${codex_rc}; see ${log}"
+      else
+        handle_issue_timeout "$issue" "$repo_slug" "$branch" implementer
+        echo "guarded implementer failed or timed out for issue #${issue}; rc=${codex_rc}; see ${log}"
+      fi
       return "$codex_rc"
     fi
 
@@ -788,10 +802,16 @@ reviewer() {
         fi
       else
         body_tail="$(tail -40 "$review_log" | sed 's/^/- /')"
-        cycle=$((cycle + 1))
-        post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Guarded reviewer could not parse a clean review verdict, so it is routing to fixer instead of approving. Prompt: ${review_log%.log}-prompt.log. Review: ${review_log}.\n${body_tail}"
-        set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
-        [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
+        if nested_agent_startup_blocker "$review_log"; then
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "Guarded reviewer could not start the nested agent. Use another generated runner with AWL_ROLE_RUNNER or fix the local agent runtime. Prompt: ${review_log%.log}-prompt.log. Review: ${review_log}.\n${body_tail}"
+          set_pr_state "$pr" "$repo_slug" "$label_stalled"
+          [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_stalled"
+        else
+          cycle=$((cycle + 1))
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Guarded reviewer could not parse a clean review verdict, so it is routing to fixer instead of approving. Prompt: ${review_log%.log}-prompt.log. Review: ${review_log}.\n${body_tail}"
+          set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
+          [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
+        fi
       fi
     elif [ "$proof_rc" = 2 ]; then
       post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=unproven cycle=0 ts=$(ts) -->" "Guarded reviewer found no configured proof command."
@@ -878,8 +898,15 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     local codex_rc=$?
     set -e
     if [ "$codex_rc" -ne 0 ]; then
-      handle_pr_timeout "$pr" "$repo_slug" "$branch" fixer "$cycle"
-      echo "guarded fixer failed or timed out for PR #${pr}; rc=${codex_rc}; see ${log}"
+      if nested_agent_startup_blocker "$log"; then
+        post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "Guarded fixer could not start the nested agent. Use another generated runner with AWL_ROLE_RUNNER or fix the local agent runtime. Log: ${log}."
+        set_pr_state "$pr" "$repo_slug" "$label_stalled"
+        [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_stalled"
+        echo "guarded fixer could not start nested agent for PR #${pr}; rc=${codex_rc}; see ${log}"
+      else
+        handle_pr_timeout "$pr" "$repo_slug" "$branch" fixer "$cycle"
+        echo "guarded fixer failed or timed out for PR #${pr}; rc=${codex_rc}; see ${log}"
+      fi
       return "$codex_rc"
     fi
 

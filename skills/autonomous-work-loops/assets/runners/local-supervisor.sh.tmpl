@@ -16,11 +16,14 @@ Defaults:
 Options:
   --watch      keep polling after each tick
   --interval   polling interval for --watch; default 600
+  --preflight-runner
+               select and validate the guarded role runner, then exit
   -h, --help   show this help
 EOF
 }
 
 mode=once
+preflight_runner=0
 interval_seconds="${AWL_SUPERVISOR_INTERVAL_SECONDS:-}"
 [ -n "$interval_seconds" ] || interval_seconds="{{interval_seconds}}"
 case "$interval_seconds" in ""|*"{{"*) interval_seconds=600 ;; esac
@@ -34,6 +37,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --watch)
       mode=watch
+      shift
+      ;;
+    --preflight-runner)
+      preflight_runner=1
       shift
       ;;
     --interval)
@@ -63,13 +70,61 @@ done
 
 [ -n "$repo" ] || repo="{{repo_path}}"
 
+run_with_timeout() {
+  if command -v timeout >/dev/null 2>&1; then timeout "$@"; return; fi
+  if command -v gtimeout >/dev/null 2>&1; then gtimeout "$@"; return; fi
+  shift
+  "$@"
+}
+
+codex_role_runner_preflight() {
+  local log
+  log="${repo}/.agent-loops/evidence/prove-the-gate/logs/role-runner-preflight-codex-$(date -u +%Y%m%d-%H%M%S).log"
+  mkdir -p "$(dirname "$log")"
+  run_with_timeout 90s codex exec --cd "$repo" -s read-only -c approval_policy='"never"' -c sandbox_workspace_write.network_access=true "Return exactly: OK" </dev/null >"$log" 2>&1
+}
+
+claude_role_runner_preflight() {
+  local log
+  log="${repo}/.agent-loops/evidence/prove-the-gate/logs/role-runner-preflight-claude-$(date -u +%Y%m%d-%H%M%S).log"
+  mkdir -p "$(dirname "$log")"
+  run_with_timeout 90s claude -p --permission-mode bypassPermissions --add-dir "$repo" -- "Return exactly: OK" </dev/null >"$log" 2>&1
+}
+
+selected_runner_preflight() {
+  case "$1" in
+    */codex.sh)
+      codex_role_runner_preflight
+      ;;
+    */claude.sh)
+      claude_role_runner_preflight
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+}
+
 runner="${AWL_ROLE_RUNNER:-}"
+runner_preflight_done=0
 if [ -z "$runner" ]; then
   if command -v codex >/dev/null 2>&1 && [ -x "${repo}/.agent-loops/runners/codex.sh" ]; then
-    runner="${repo}/.agent-loops/runners/codex.sh"
-  elif command -v claude >/dev/null 2>&1 && [ -x "${repo}/.agent-loops/runners/claude.sh" ]; then
-    runner="${repo}/.agent-loops/runners/claude.sh"
-  else
+    if [ "${AWL_PREFLIGHT_ROLE_RUNNER:-1}" = "0" ] || codex_role_runner_preflight; then
+      runner="${repo}/.agent-loops/runners/codex.sh"
+      [ "${AWL_PREFLIGHT_ROLE_RUNNER:-1}" = "0" ] || runner_preflight_done=1
+    else
+      echo "Codex role runner preflight failed; falling back if another generated runner is available." >&2
+    fi
+  fi
+  if [ -z "$runner" ] && command -v claude >/dev/null 2>&1 && [ -x "${repo}/.agent-loops/runners/claude.sh" ]; then
+    if [ "${AWL_PREFLIGHT_ROLE_RUNNER:-1}" = "0" ] || claude_role_runner_preflight; then
+      runner="${repo}/.agent-loops/runners/claude.sh"
+      [ "${AWL_PREFLIGHT_ROLE_RUNNER:-1}" = "0" ] || runner_preflight_done=1
+    else
+      echo "Claude role runner preflight failed." >&2
+    fi
+  fi
+  if [ -z "$runner" ]; then
     echo "No guarded role runner found." >&2
     echo "Install Codex CLI or Claude Code, or set AWL_ROLE_RUNNER to a guarded role runner path." >&2
     exit 1
@@ -81,27 +136,53 @@ if [ ! -x "$runner" ]; then
   exit 1
 fi
 
+if [ "$preflight_runner" = 1 ]; then
+  if [ "${AWL_PREFLIGHT_ROLE_RUNNER:-1}" != "0" ] && [ "$runner_preflight_done" != 1 ] && ! selected_runner_preflight "$runner"; then
+    echo "Selected guarded role runner failed preflight: $runner" >&2
+    exit 1
+  fi
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] role runner preflight passed: $runner"
+  exit 0
+fi
+
 run_tick() {
+  local tick_failures=0 role_rc
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   echo "[$ts] autonomous-work-loops supervisor tick"
+  echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] role runner: $runner"
 
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] role: implementer"
-  "$runner" "$repo" implementer || true
+  "$runner" "$repo" implementer || {
+    role_rc=$?
+    tick_failures=$((tick_failures + 1))
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] implementer exited with ${role_rc}"
+  }
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] role: reviewer"
-  "$runner" "$repo" reviewer || true
+  "$runner" "$repo" reviewer || {
+    role_rc=$?
+    tick_failures=$((tick_failures + 1))
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] reviewer exited with ${role_rc}"
+  }
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] role: fixer"
-  "$runner" "$repo" fixer || true
+  "$runner" "$repo" fixer || {
+    role_rc=$?
+    tick_failures=$((tick_failures + 1))
+    echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] fixer exited with ${role_rc}"
+  }
+  return "$tick_failures"
 }
 
-run_tick
+tick_rc=0
+run_tick || tick_rc=$?
 
 if [ "$mode" != "watch" ]; then
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] one-shot tick complete"
-  exit 0
+  exit "$tick_rc"
 fi
 
 while true; do
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] sleeping ${interval_seconds}s"
   sleep "$interval_seconds"
-  run_tick
+  tick_rc=0
+  run_tick || tick_rc=$?
 done

@@ -431,14 +431,26 @@ trap - EXIT
 if git -C "$target" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git_dir="$(git -C "$target" rev-parse --absolute-git-dir)"
   exclude_file="${git_dir}/info/exclude"
-  mkdir -p "$(dirname "$exclude_file")"
-  touch "$exclude_file"
-  if ! grep -Fxq ".agent-loops/" "$exclude_file"; then
-    printf '\n%s\n' "# autonomous-work-loops local runtime files" >> "$exclude_file"
-    printf '%s\n' ".agent-loops/" >> "$exclude_file"
-  fi
-  if ! grep -Fxq ".agent-loops.tmp.*/" "$exclude_file"; then
-    printf '%s\n' ".agent-loops.tmp.*/" >> "$exclude_file"
+  if mkdir -p "$(dirname "$exclude_file")" 2>/dev/null && touch "$exclude_file" 2>/dev/null; then
+    if [ ! -w "$exclude_file" ]; then
+      printf 'warn: could not update %s; .agent-loops/ will remain untracked locally, but generated runners still refuse to stage it.\n' "$exclude_file" >&2
+    else
+      exclude_ok=1
+      if ! grep -Fxq ".agent-loops/" "$exclude_file"; then
+        {
+          printf '\n%s\n' "# autonomous-work-loops local runtime files"
+          printf '%s\n' ".agent-loops/"
+        } >> "$exclude_file" || exclude_ok=0
+      fi
+      if ! grep -Fxq ".agent-loops.tmp.*/" "$exclude_file"; then
+        printf '%s\n' ".agent-loops.tmp.*/" >> "$exclude_file" || exclude_ok=0
+      fi
+      if [ "$exclude_ok" -ne 1 ]; then
+        printf 'warn: could not update %s; .agent-loops/ will remain untracked locally, but generated runners still refuse to stage it.\n' "$exclude_file" >&2
+      fi
+    fi
+  else
+    printf 'warn: could not update %s; .agent-loops/ will remain untracked locally, but generated runners still refuse to stage it.\n' "$exclude_file" >&2
   fi
 fi
 
@@ -459,6 +471,8 @@ if [ "$guided" -eq 1 ]; then
   (cd "$target" && "$dest/setup-labels.sh")
   printf 'guided setup: running doctor\n'
   (cd "$target" && "$dest/doctor.sh")
+  printf 'guided setup: preflighting role runner\n'
+  (cd "$target" && "$dest/runners/local-supervisor.sh" --preflight-runner "$target")
   printf 'guided setup: creating smoke issue\n'
   smoke_issue_url="$(cd "$target" && gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready)"
   printf 'guided setup: created %s\n' "$smoke_issue_url"
@@ -476,5 +490,24 @@ if [ "$guided" -eq 1 ]; then
     sleep 2
   done
   printf 'guided setup: running one supervisor tick\n'
-  (cd "$target" && "$dest/runners/local-supervisor.sh" --once "$target")
+  supervisor_rc=0
+  (cd "$target" && "$dest/runners/local-supervisor.sh" --once "$target") || supervisor_rc=$?
+  repo_slug="$(cd "$target" && gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
+  branch="loop/impl/issue-${smoke_issue}"
+  pr_url=""
+  issue_labels=""
+  if [ -n "$repo_slug" ]; then
+    pr_url="$(cd "$target" && gh pr list --repo "$repo_slug" --state all --head "$branch" --json url --jq '.[0].url // empty' 2>/dev/null || true)"
+    issue_labels="$(cd "$target" && gh issue view "$smoke_issue" --repo "$repo_slug" --json labels --jq '[.labels[].name] | join(", ")' 2>/dev/null || true)"
+  fi
+  printf 'guided setup: issue #%s labels: %s\n' "$smoke_issue" "${issue_labels:-'(unknown)'}"
+  if [ -n "$pr_url" ]; then
+    printf 'guided setup: PR: %s\n' "$pr_url"
+  else
+    printf 'guided setup: no PR was opened; inspect issue #%s and .agent-loops/evidence/prove-the-gate/logs/\n' "$smoke_issue"
+  fi
+  if [ "$supervisor_rc" -ne 0 ]; then
+    printf 'guided setup: supervisor exited with %s; setup needs attention before watch mode.\n' "$supervisor_rc" >&2
+    exit "$supervisor_rc"
+  fi
 fi

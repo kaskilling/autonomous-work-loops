@@ -81,14 +81,22 @@ Then run the generated setup checks:
 .agent-loops/doctor.sh
 ```
 
-Bootstrap also adds `.agent-loops/` to the target repo's local
-`.git/info/exclude`. Loop runtime files stay local by default and should not
-appear in implementation PRs.
+Bootstrap also tries to add `.agent-loops/` to the target repo's local
+`.git/info/exclude`. If the local git metadata is read-only, bootstrap warns
+and continues; generated runners still refuse to stage `.agent-loops/` files.
 
 Run one local supervisor tick:
 
 ```sh
 .agent-loops/runners/local-supervisor.sh --once "$PWD"
+```
+
+The supervisor preflights the Codex role runner before using it. If Codex cannot
+start in the current environment and Claude Code is available, it falls back to
+the generated Claude runner. You can force that runner explicitly:
+
+```sh
+AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh --once "$PWD"
 ```
 
 Or watch continuously after the smoke test is proven:
@@ -110,7 +118,7 @@ starting the supervisor:
 | Target repo | A small GitHub repo with issues and PRs enabled |
 | Proof command | Existing test/build/lint command, for example `npm test` or `python3 -m pytest -q` |
 | Trusted actors | Your authenticated GitHub username |
-| Runner | Codex CLI if available, otherwise Claude Code |
+| Runner | First viable generated runner; Codex is probed before use, then Claude Code is used if available |
 | Supervisor cadence | The generated default interval |
 
 If there is no proof command, the loop must stop at `unproven`. Passing proof is

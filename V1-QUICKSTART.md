@@ -89,8 +89,9 @@ starting the supervisor. The script refuses to overwrite an existing
 targets unless you pass `--allow-incomplete` for manual scaffolding.
 
 Bootstrap adds `.agent-loops/` and `.agent-loops.tmp.*/` to the target repo's
-local `.git/info/exclude`. You should not need to mention AWL files in issues;
-the runner also refuses to stage `.agent-loops/` files.
+local `.git/info/exclude` when that file is writable. If local git metadata is
+read-only, bootstrap warns and continues; the runner still refuses to stage
+`.agent-loops/` files.
 
 Confirm these fields in `.agent-loops/config.yaml`:
 
@@ -162,6 +163,14 @@ The supervisor runs the roles in order:
 implementer -> reviewer -> fixer
 ```
 
+Before it claims work, the supervisor probes the generated Codex runner. If
+Codex cannot start and Claude Code is available, it falls back to the generated
+Claude runner. To force Claude directly:
+
+```sh
+AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh --once "$PWD"
+```
+
 It exits after one pass by default. Use explicit watch mode only after the smoke
 test is proven:
 
@@ -175,7 +184,8 @@ Override the interval only when you are deliberately testing cadence:
 AWL_SUPERVISOR_INTERVAL_SECONDS=60 .agent-loops/runners/local-supervisor.sh --watch "$PWD"
 ```
 
-Override the role runner only when auto-detection is wrong:
+Override the role runner only when auto-detection is wrong or you want to skip
+the Codex preflight:
 
 ```sh
 AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh --once "$PWD"
