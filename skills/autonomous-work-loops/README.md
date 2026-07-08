@@ -68,5 +68,5 @@ AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local
 
 ## Read More
 
-The repository root README has the full operator path, release status, and
-publishing notes.
+The repository root README has the full operator path. Publishing and validation
+status live in `PUBLISHING.md` and `build/GATE-RESULTS.md`.

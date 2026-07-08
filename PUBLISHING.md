@@ -19,7 +19,7 @@ fixture runs. In strict mode, executable issues must be authored by
 issue. The V1 product path is now one managed local supervisor with status and
 stop controls. Codex Automations and Claude `/loop` are removed from V1 setup.
 
-Release-candidate proof from 2026-07-06:
+Release-candidate proof:
 
 1. Fresh public clone of `kaskilling/autonomous-work-loops` passed
    `build/harness/check-packaging.sh`.
@@ -37,6 +37,12 @@ Release-candidate proof from 2026-07-06:
    Codex role-runner attempt hit a local Codex state/app-server permission
    blocker; the same supervisor recovered and converged with the generated
    Claude role runner.
+7. Setup-and-arm live validation moved `Mohamad-Kamar/tts-compare` issue #1 to
+   PR #2, ingested external bot feedback, fixed it, and converged to
+   `ready-for-human`.
+8. Hosted check routing passed live validation for green checks, PR-only red
+   checks routed to `needs-fix`, and default-branch baseline-red checks routed
+   to `ready-for-human-baseline-red`.
 
 Before broad public release, repeat the release-candidate smoke with at least
 one external user and a pinned tag:
@@ -50,21 +56,18 @@ one external user and a pinned tag:
 5. Confirm later intervals no-op cleanly and create no duplicate branch, PR, or
    review marker.
 
-The guarded-runner matrix plus the 2026-07-06 fresh public install smoke is a
-strong release-candidate signal for targeted validation. It is not a broad
-public-launch proof by itself. Codex Automations were rerun on 2026-07-02 in
-local and worktree execution modes and failed to connect to `api.github.com`;
-Claude `/loop` passed but is also removed from V1 to keep one uniform setup
-path. The cadence row is foreground-style evidence for the runner/state
-machine, not actual system cron. System cron and GitHub Actions schedule are
-out of V1 scope. Browser/Playwright proof remains out of scope unless run in a
-compatible non-sandboxed surface.
+The guarded-runner matrix, fresh public install smoke, setup-and-arm live run,
+and hosted-check routing trials are a strong release-candidate signal for
+targeted validation. They are not a broad public-launch proof by themselves.
+Codex Automations and Claude `/loop` are removed from V1 to keep one uniform
+setup path. System cron and GitHub Actions schedules are out of V1 scope.
+Browser/Playwright proof remains out of scope unless run in a compatible
+non-sandboxed surface.
 
 ## How to publish (five channels, pick based on audience)
 
 ### 1. Cross-tool (Claude + Codex + .agents) — plain git repo
-This repo is already shaped for it, and the clean temp-home proof passed on
-2026-07-06. Users:
+This repo is already shaped for it, and the clean temp-home proof passed. Users:
 ```sh
 git clone <your-repo-url> autonomous-work-loops
 cd autonomous-work-loops
@@ -73,8 +76,8 @@ cd autonomous-work-loops
 `install.sh` drops it into `~/.claude/skills`, `~/.codex/skills`, and `~/.agents/skills`. This is the most auditable path — the security-conscious audience can read every line before trusting it with credentials. Lead with this for targeted validation.
 
 ### 2. Standard skill installer — public SKILL.md distribution
-The nested skill folder resolved successfully in the 2026-07-06 clean install
-proof. The shortest setup path is:
+The nested skill folder resolved successfully in clean install proof. The
+shortest setup path is:
 
 ```sh
 npx skills@latest add kaskilling/autonomous-work-loops
@@ -91,7 +94,7 @@ and still installs into the user's agent skill directories.
 
 ### 3. Codex plugin marketplace
 The repo carries `.codex-plugin/plugin.json`, and the clean local-marketplace
-install proof passed on 2026-07-06. To make it installable as a Codex plugin,
+install proof passed. To make it installable as a Codex plugin,
 publish it through a Codex plugin marketplace entry that points at this repo
 and pins a tag or commit. The plugin manifest points Codex at the real
 `./skills/` tree and includes UI metadata for the Codex app.
@@ -102,7 +105,7 @@ mutate credentialed repositories.
 
 ### 4. Claude Code one-click — plugin marketplace
 The repo carries `.claude-plugin/plugin.json`, and the clean local-marketplace
-install proof passed on 2026-07-06. To make it installable:
+install proof passed. To make it installable:
 - **Your own marketplace**: create a repo with `.claude-plugin/marketplace.json` listing this plugin with a `git` (or `git-subdir`) source and a pinned `sha`. Users run `/plugin marketplace add <your-marketplace-url>` then `/plugin install autonomous-work-loops`.
 - **Official directory**: submit a PR to `anthropics/claude-code` (or the relevant community marketplace) adding an entry pointing at this repo with a pinned `sha`. This is how every plugin in `claude-plugins-official` is listed.
 
@@ -122,7 +125,7 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 "Loop engineering" is already a crowded term and `ralph-loop` already ships. Do **not** market this as "loops for Claude." Market the three things it has that nothing else does:
 
 1. **Reviewed, not just retried.** Adversarial, proof-anchored review that converges on a clean proven pass and enters review→fix cycles only for real defects (most "autonomous PR" demos hand you unreviewed first-draft code). One-liner: *"It doesn't just write the PR — it reviews and hardens it until it converges."*
-2. **Designed for guarded autonomy, not yet proven release-ready.** Trust-gated intake + proof-as-precondition + human gates + cost walls are the intended safety story. Strict trust and the guarded Codex runner now pass, but the wider matrix remains open. One-liner after the gate: *"It exposes the whole state machine in your issue labels and proves gates before claiming safety."*
+2. **Designed for guarded autonomy.** Trust-gated intake, proof-as-precondition, hosted-check classification, human gates, and cost walls are the safety story. One-liner: *"It exposes the whole state machine in your issue labels and proves gates before claiming safety."*
 3. **Portable and honest.** Works across Claude/Codex/any agent; state lives on the host so it's resumable and auditable; no hidden hosted service or unmanaged daemon. One-liner: *"No black box — the whole state machine is visible in your issue labels."*
 
 ### Channels

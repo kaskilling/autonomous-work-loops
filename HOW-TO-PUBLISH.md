@@ -1,6 +1,6 @@
 # How to Publish — simple step-by-step
 
-This is the practical checklist. For the *why* behind channel choices, see `PUBLISHING.md`. For what's proven vs. designed, see the status note in `README.md`.
+This is the practical checklist. For the *why* behind channel choices, see `PUBLISHING.md`. For the current proof record, see `build/GATE-RESULTS.md`.
 
 ---
 
@@ -16,8 +16,9 @@ This is the practical checklist. For the *why* behind channel choices, see `PUBL
 | Docs match shipped behavior (no phantom flags, no stale cycle claims) | ✅ swept |
 | Baseline live run passed (GitHub + Codex + pytest) | ✅ once |
 | Guarded-runner matrix (strict-trust, no-proof, failed-proof, runner cadence, dup-claim, stale-claim) | ✅ strong targeted-validation signal in `build/GATE-RESULTS.md` |
-| Browser-compatible proof | ⏳ still needs a compatible non-sandboxed surface |
-| Fresh-install release-candidate smoke | ✅ passed 2026-07-06 on `kaskilling/awl-live-smoke-20260706` |
+| Browser-compatible proof | Not part of the V1 promise unless a compatible non-sandboxed surface is validated |
+| Fresh-install release-candidate smoke | ✅ passed on `kaskilling/awl-live-smoke-20260706` |
+| Hosted check routing | ✅ green, PR-only red, and baseline-red live validations passed |
 | Standard skill installer install | ✅ nested `skills/autonomous-work-loops` resolution passed |
 | Codex plugin install | ✅ clean temp-home local-marketplace install passed |
 | Claude plugin install | ✅ clean temp-home local-marketplace install passed |
@@ -41,7 +42,7 @@ gh repo create kaskilling/autonomous-work-loops --public --source=. --remote=ori
 
 Tag targeted-validation builds so installs can pin them:
 ```sh
-git tag v0.1.6 && git push origin v0.1.6
+git tag v0.1.8 && git push origin v0.1.8
 ```
 
 ---
@@ -64,8 +65,8 @@ That drops the skill into `~/.claude/skills`, `~/.codex/skills`, `~/.agents/skil
 
 ### Channel B — Standard skill installer
 
-The clean install test passed on 2026-07-06. The nested skill can be installed
-with a standard skill installer:
+The clean install test passed. The nested skill can be installed with a standard
+skill installer:
 
 ```sh
 npx skills@latest add kaskilling/autonomous-work-loops
@@ -79,8 +80,8 @@ npx skills@latest add kaskilling/autonomous-work-loops --skill autonomous-work-l
 
 ### Channel C — Codex plugin marketplace
 
-The clean temp-home local-marketplace install test passed on 2026-07-06. The
-repo now has `.codex-plugin/plugin.json`. To make it Codex-installable through a
+The clean temp-home local-marketplace install test passed. The repo now has
+`.codex-plugin/plugin.json`. To make it Codex-installable through a
 marketplace, add a marketplace entry that points at this repo and pins a tag or
 commit. The manifest points Codex at the real `./skills/` tree and includes
 app-facing metadata.
@@ -89,8 +90,8 @@ Pin releases deliberately because the plugin can mutate credentialed repos.
 
 ### Channel D — Claude Code one-click (plugin marketplace)
 
-The clean temp-home local-marketplace install test passed on 2026-07-06. The
-repo already has `.claude-plugin/plugin.json`. To make it
+The clean temp-home local-marketplace install test passed. The repo already has
+`.claude-plugin/plugin.json`. To make it
 `/plugin`-installable, create a tiny **marketplace repo** (or add a marketplace
 file to this one):
 
@@ -102,7 +103,7 @@ file to this one):
   "plugins": [
     {
       "name": "autonomous-work-loops",
-      "source": { "source": "git", "url": "https://github.com/<you>/autonomous-work-loops.git", "ref": "v0.1.6" },
+      "source": { "source": "git", "url": "https://github.com/<you>/autonomous-work-loops.git", "ref": "v0.1.8" },
       "category": "automation"
     }
   ]
@@ -115,7 +116,7 @@ Users then run:
 /plugin install autonomous-work-loops
 ```
 
-Pin `ref` to the **tag** (`v0.1.6`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
+Pin `ref` to the **tag** (`v0.1.8`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
 
 ### Channel E — Public discovery (the launch post)
 
@@ -133,7 +134,6 @@ announce it. Use the material already written:
 ## The one-paragraph version
 
 1. Keep strict-trust semantics author-only and committed.
-2. Treat T2/T3/T4 as passed only with auditor-verified evidence from `build/GATE-RESULTS.md`.
-3. Rerun replacement T5 on a Git-capable Codex surface to prove allowlisted dispatch issues still work.
-4. Use the 2026-07-06 fresh-install smoke as the internal baseline.
-5. Ask one external user to repeat standard skill installer, Codex plugin, and Claude plugin installs from clean agent homes before any broad public plugin or "leave it running" announcement.
+2. Treat live hosted-check routing as proven only by the green, PR-only red, and baseline-red rows in `build/GATE-RESULTS.md`.
+3. Use the fresh-install smoke plus setup-and-arm live runs as the internal baseline.
+4. Ask one external user to repeat install and setup from a pinned tag before any broad public plugin or "leave it running" announcement.

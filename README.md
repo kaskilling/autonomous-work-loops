@@ -2,12 +2,6 @@
 
 Turn trusted GitHub issues into proven, reviewed PRs.
 
-**Status:** ready for private development and targeted validation installs.
-The 2026-07-08 setup pass proved the smooth path: skill/default setup can render
-`.agent-loops/`, run guided checks, and arm a managed local supervisor with
-status and stop controls. Keep broad public launch behind real user trials and
-pinned release tags.
-
 You write a clear issue and add the `ready` label. A local supervisor runs three
 agent roles:
 
@@ -143,12 +137,6 @@ the generated Claude runner. You can force that runner explicitly:
 AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh --once "$PWD"
 ```
 
-Or watch continuously after the smoke test is proven:
-
-```sh
-.agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"
-```
-
 If no trusted ready issue exists, the supervisor prints the exact smoke-issue
 command to run from `.agent-loops/FIRST-TRIAL-ISSUE.md`.
 
@@ -161,10 +149,10 @@ command to run from `.agent-loops/FIRST-TRIAL-ISSUE.md`.
   ticks.
 - `ready`: the label that gives AWL permission to work on an issue.
 
-## What You Need To Decide
+## Setup Decisions
 
-Bootstrap tries to detect the defaults, but you should confirm these before
-starting the supervisor:
+Bootstrap tries to detect safe defaults. Confirm these in
+`.agent-loops/BOOTSTRAP-REPORT.md` and `.agent-loops/config.yaml`:
 
 | Decision | Default to use first |
 |---|---|
@@ -259,22 +247,3 @@ For publishing notes, see [PUBLISHING.md](PUBLISHING.md).
 - [DEVELOPER-EXPERIENCE.md](DEVELOPER-EXPERIENCE.md) shows what the daily loop feels like.
 - [design/](design/) contains the ADRs, glossary, ecosystem notes, and V2 target design.
 - [build/](build/) contains build plans, test results, and gate evidence.
-
-## Current Status
-
-V1 is implemented and tested on live private GitHub repos. The current happy
-path is the managed local supervisor:
-
-```sh
-.agent-loops/runners/local-supervisor.sh --background "$PWD"
-```
-
-The latest release-candidate smokes used fresh clones, clean agent homes, and
-generated role runners to move trusted `ready` issues into proven PRs. The
-managed supervisor now exposes `--status` and `--stop` so a setup agent can arm
-the repo without leaving the user to run a watch command manually.
-
-Known constraints: browser or Playwright proof can fail under locked local Codex
-sandboxes. On this machine, the nested Codex role runner also hit a local Codex
-state/app-server permission blocker during the fresh smoke; the supervisor
-recovered and converged with the generated Claude role runner.
