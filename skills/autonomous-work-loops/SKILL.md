@@ -9,7 +9,7 @@ metadata:
 
 The default user experience is product setup: when invoked from a target repo without an explicit role, set up autonomous-work-loops, prove the smoke path, and arm the managed local supervisor. The user should not have to choose an internal mode, run generated setup commands, or understand `.agent-loops/` before seeing whether the repo is ready.
 
-The runtime remains host-state driven. Implementer, reviewer, and fixer ticks are stateless and reconstruct state from GitHub plus `.agent-loops/`. The managed background supervisor is only a local watch process with a PID file, log file, `--status`, and `--stop`; it is not cron, launchd, a hosted bot, Codex Automation, or Claude `/loop`.
+The runtime remains host-state driven. Implementer, reviewer, and fixer ticks are stateless and reconstruct state from GitHub plus `.agent-loops/`. The managed background supervisor is only a local watch process with a PID file, log file, `--status`, and `--stop`; it is not cron, launchd, a hosted bot, Codex Automation, or Claude `/loop`. Durable background watch requires a persistent local terminal. If the current harness stops child processes after a command exits, use foreground `--watch` or tell the user the exact persistent-terminal command.
 
 ## Mode Selection
 
@@ -35,6 +35,10 @@ If `.agent-loops/` already exists, do not overwrite it unless the user explicitl
 .agent-loops/runners/local-supervisor.sh --background "$PWD"
 .agent-loops/runners/local-supervisor.sh --status "$PWD"
 ```
+
+If status reports a stale or stopped background supervisor because the harness
+reaped the child process, do not claim the repo is armed. Start foreground watch
+in a persistent terminal or give the user the exact `--watch` command.
 
 End Setup and Arm mode by telling the user:
 

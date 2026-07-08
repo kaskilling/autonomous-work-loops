@@ -4,6 +4,7 @@ Use Git tags and GitHub releases for frozen states instead of committing copied 
 
 Current release markers:
 
+- `v0.1.8` - Idempotent setup-and-arm reruns: existing `.agent-loops/` resumes without duplicate smoke issues; background durability docs now call out the persistent-terminal requirement.
 - `v0.1.7` - Live setup-and-arm release gate: external-review fixer cycle fix, `tts-compare` PR #2 reached `ready-for-human`, managed background status/stop verified in a persistent terminal.
 - `v0.1.6` - Setup-and-arm second-opinion hardening: supervisor status file, guided smoke failure cleanup, and recovery-focused bootstrap report.
 - `v1.0.0` - V1 baseline before the guarded runner.

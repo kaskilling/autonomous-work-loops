@@ -205,7 +205,7 @@ post_pr_marker() {
   file="$(mktemp)"
   {
     printf '%s\n\n' "$marker"
-    printf '%s\n' "$body"
+    printf '%b\n' "$body"
   } > "$file"
   gh pr comment "$pr" --body-file "$file" >/dev/null
   rm -f "$file"
@@ -216,7 +216,7 @@ post_issue_marker() {
   file="$(mktemp)"
   {
     printf '%s\n\n' "$marker"
-    printf '%s\n' "$body"
+    printf '%b\n' "$body"
   } > "$file"
   gh issue comment "$issue" --body-file "$file" >/dev/null
   rm -f "$file"
@@ -399,7 +399,8 @@ print_no_ready_diagnostic() {
   else
     printf 'no trusted ready work: ready issue(s) existed but could not be claimed this tick\n'
   fi
-  printf 'create smoke issue: gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label %s\n' "$label_ready"
+  printf 'create trusted work: gh issue create --title "<clear work title>" --body "<requirements and acceptance criteria>" --label %s\n' "$label_ready"
+  printf 'first-run smoke body, if still needed: .agent-loops/FIRST-TRIAL-ISSUE.md\n'
 }
 
 external_review_blockers() {

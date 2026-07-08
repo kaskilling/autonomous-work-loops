@@ -22,7 +22,9 @@ because the default branch is already red, the PR is labeled
 
 V1 is local and GitHub-only. It is not a hosted bot, cron job, GitHub Action,
 Codex Automation, or Claude `/loop` scheduler. The normal setup starts one
-managed local background supervisor that you can inspect and stop.
+managed local supervisor that you can inspect and stop. For durable background
+watch, run it from a persistent local terminal; short-lived agent command
+sessions may stop child processes when the command exits.
 
 ## First Run
 
@@ -35,6 +37,8 @@ From the repo where agents should work, invoke the skill in Codex or Claude:
 The agent should set up `.agent-loops/`, create or update labels, run doctor,
 prove one smoke issue, and arm the managed local supervisor. When it finishes,
 create normal GitHub issues for work you want done and add the `ready` label.
+If setup is interrupted, invoke the skill again; existing `.agent-loops/` is
+resumed instead of replaced.
 
 What success looks like:
 
@@ -92,7 +96,9 @@ cd /path/to/target-repo
 
 `--arm` creates or updates labels, runs doctor, preflights the role runner,
 creates the first smoke issue, runs one supervisor tick, then starts managed
-background watch.
+background watch. If `.agent-loops/` already exists, `--arm` resumes the
+existing setup, avoids creating a duplicate smoke issue, and arms the
+supervisor.
 
 For setup without background watch:
 
@@ -106,8 +112,8 @@ For manual setup without GitHub label mutation or a supervisor tick:
 /path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
 ```
 
-If `.agent-loops/` already exists and you intentionally want to replace it, add
-`--force`.
+If `.agent-loops/` already exists and you intentionally want to replace it
+rather than resume it, add `--force`.
 
 Manual setup requires the generated commands:
 
@@ -116,6 +122,13 @@ Manual setup requires the generated commands:
 .agent-loops/doctor.sh
 .agent-loops/runners/local-supervisor.sh --once "$PWD"
 .agent-loops/runners/local-supervisor.sh --background "$PWD"
+```
+
+Use foreground watch when your agent harness cannot keep background child
+processes alive:
+
+```sh
+.agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"
 ```
 
 Bootstrap also tries to add `.agent-loops/` to the target repo's local

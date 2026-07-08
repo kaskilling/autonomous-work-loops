@@ -171,7 +171,7 @@ post_pr_marker() {
   file="$(mktemp)"
   {
     printf '%s\n\n' "$marker"
-    printf '%s\n' "$body"
+    printf '%b\n' "$body"
   } > "$file"
   gh pr comment "$pr" --body-file "$file" >/dev/null
   rm -f "$file"
@@ -182,7 +182,7 @@ post_issue_marker() {
   file="$(mktemp)"
   {
     printf '%s\n\n' "$marker"
-    printf '%s\n' "$body"
+    printf '%b\n' "$body"
   } > "$file"
   gh issue comment "$issue" --body-file "$file" >/dev/null
   rm -f "$file"

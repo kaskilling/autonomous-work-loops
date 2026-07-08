@@ -109,6 +109,7 @@ assets_dir="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 template_dir="${assets_dir}/agent-loops-template"
 runner_template_dir="${assets_dir}/runners"
 dest="${target}/.agent-loops"
+reused_existing=0
 
 if [ ! -d "$template_dir" ]; then
   printf 'missing template directory: %s\n' "$template_dir" >&2
@@ -121,11 +122,16 @@ if [ ! -d "$runner_template_dir" ]; then
 fi
 
 if [ -e "$dest" ] && [ "$force" -ne 1 ]; then
-  printf 'refusing to overwrite existing %s\n' "$dest" >&2
-  printf 'rerun with --force to replace it.\n' >&2
-  exit 1
+  if [ "$guided" -eq 1 ] && [ -d "$dest" ]; then
+    reused_existing=1
+  else
+    printf 'refusing to overwrite existing %s\n' "$dest" >&2
+    printf 'rerun with --force to replace it, or use --arm/--guided to resume existing setup.\n' >&2
+    exit 1
+  fi
 fi
 
+if [ "$reused_existing" -eq 0 ]; then
 tmp="${target}/.agent-loops.tmp.$$"
 rm -rf "$tmp"
 trap 'rm -rf "$tmp"' EXIT
@@ -409,6 +415,7 @@ report = f"""# Autonomous Work Loops Bootstrap Report
 - First trial issue: `.agent-loops/FIRST-TRIAL-ISSUE.md`
 - Normal setup command:
   - one-command arm path: `{assets_dir}/bootstrap.sh --arm "{target}"`
+  - rerun behavior: if `.agent-loops/` already exists, `--arm` resumes setup without creating another smoke issue
 - Recovery/debug commands:
   - one-command guided path: `{assets_dir}/bootstrap.sh --guided "{target}"`
   - `gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready`
@@ -422,7 +429,7 @@ report = f"""# Autonomous Work Loops Bootstrap Report
 - Budgets: default V1 budgets retained in `.agent-loops/config.yaml`
 - Reviewer model: blank, meaning same-model adversarial review unless changed in config
 - Critical decisions:
-  - Existing `.agent-loops` is preserved unless bootstrap runs with `--force`.
+  - Existing `.agent-loops` is preserved unless bootstrap runs with `--force`; guided and armed setup resume it.
   - Strict trust is retained as the conservative default.
   - Missing proof commands are left blank rather than guessed.
   - {critical_label_text}
@@ -440,6 +447,16 @@ if [ -e "$dest" ]; then
 fi
 mv "$tmp" "$dest"
 trap - EXIT
+else
+  for required in "$dest/setup-labels.sh" "$dest/doctor.sh" "$dest/runners/local-supervisor.sh"; do
+    if [ ! -f "$required" ]; then
+      printf 'existing %s is missing required file: %s\n' "$dest" "$required" >&2
+      printf 'rerun with --force to replace the incomplete setup.\n' >&2
+      exit 1
+    fi
+  done
+  chmod +x "$dest/setup-labels.sh" "$dest/doctor.sh" "$dest/runners/"*.sh 2>/dev/null || true
+fi
 
 if git -C "$target" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git_dir="$(git -C "$target" rev-parse --absolute-git-dir)"
@@ -467,12 +484,16 @@ if git -C "$target" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   fi
 fi
 
-printf 'bootstrapped %s\n' "$dest"
+if [ "$reused_existing" -eq 1 ]; then
+  printf 'using existing %s\n' "$dest"
+else
+  printf 'bootstrapped %s\n' "$dest"
+fi
 printf 'guided: %s --guided "%s"\n' "${assets_dir}/bootstrap.sh" "$target"
 printf 'guided and armed: %s --arm "%s"\n' "${assets_dir}/bootstrap.sh" "$target"
 printf 'manual labels: %s\n' "${dest}/setup-labels.sh"
 printf 'manual doctor: %s\n' "${dest}/doctor.sh"
-printf 'manual smoke issue: gh issue create --title "%s" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready\n' "Add one tiny tested change to prove autonomous-work-loops is wired correctly"
+printf 'manual smoke issue (fresh setup only): gh issue create --title "%s" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready\n' "Add one tiny tested change to prove autonomous-work-loops is wired correctly"
 printf 'manual one-shot: %s --once "$PWD"\n' "${dest}/runners/local-supervisor.sh"
 printf 'background supervisor: %s --background "$PWD"\n' "${dest}/runners/local-supervisor.sh"
 printf 'watch later: %s --watch --interval 600 "$PWD"\n' "${dest}/runners/local-supervisor.sh"
@@ -488,6 +509,21 @@ if [ "$guided" -eq 1 ]; then
   (cd "$target" && "$dest/doctor.sh")
   printf 'guided setup: preflighting role runner\n'
   (cd "$target" && "$dest/runners/local-supervisor.sh" --preflight-runner "$target")
+  if [ "$reused_existing" -eq 1 ]; then
+    printf 'guided setup: existing .agent-loops detected; not creating a duplicate smoke issue\n'
+    if [ "$arm" -eq 1 ]; then
+      printf 'guided setup: starting managed background supervisor\n'
+      (cd "$target" && "$dest/runners/local-supervisor.sh" --background "$target")
+      printf 'guided setup: autonomous-work-loops is armed for this repo\n'
+      printf 'guided setup: create trusted GitHub issues and add label ready\n'
+      printf 'guided setup: supervisor status: %s --status "%s"\n' "$dest/runners/local-supervisor.sh" "$target"
+      printf 'guided setup: supervisor stop: %s --stop "%s"\n' "$dest/runners/local-supervisor.sh" "$target"
+    else
+      printf 'guided setup: running one supervisor tick on existing setup\n'
+      (cd "$target" && "$dest/runners/local-supervisor.sh" --once "$target")
+    fi
+    exit 0
+  fi
   printf 'guided setup: creating smoke issue\n'
   smoke_issue_url="$(cd "$target" && gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready)"
   printf 'guided setup: created %s\n' "$smoke_issue_url"

@@ -9,7 +9,9 @@ This skill bootstraps and arms a target GitHub repo with a local work loop:
 
 V1 is local and GitHub-only. It is not a hosted bot, cron job, GitHub Action,
 Codex Automation, or Claude `/loop` scheduler. The normal setup starts one
-managed local supervisor with status and stop controls.
+managed local supervisor with status and stop controls. Durable background watch
+requires a persistent local terminal; use foreground `--watch` when a harness
+stops child processes after the setup command exits.
 
 ## Setup
 
@@ -28,7 +30,9 @@ From the target GitHub repo, invoke the skill:
 ```
 
 The agent should run the guided-and-armed setup: create labels, run doctor,
-prove the smoke issue, and start managed background watch.
+prove the smoke issue, and start managed background watch. If `.agent-loops/`
+already exists, the same command resumes setup and avoids a duplicate smoke
+issue.
 
 CLI equivalent:
 
