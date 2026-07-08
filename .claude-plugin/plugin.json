@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "autonomous-work-loops",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Bootstrap and arm a reviewed, converging, multi-agent implement/review/fix PR loop in a repo. Tag an issue 'ready'; loops claim it, open a proven PR, wait for hosted checks, ingest inline bot review feedback, adversarially review and fix it until convergence, then label it ready-for-human or ready-for-human-baseline-red. Use when the user mentions work loops, autonomous PRs, an implement/review/fix loop, or a ready label.",
   "author": { "name": "mkamar" },
   "skills": ["./skills/autonomous-work-loops"]

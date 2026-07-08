@@ -4,12 +4,12 @@ How `autonomous-work-loops` is used, where it lives, and how it is distributed.
 
 ## 1. What the skill *is* in the ecosystem
 
-Per ADR-0001, this is **not a daemon and not a slash command that runs forever**. It is a skill with two modes:
+Per ADR-0001, this is **not a hosted bot and not an app-native infinite slash command**. It is a skill with two runtime surfaces:
 
-- **Bootstrap mode** — invoked once per repo (`/autonomous-work-loops` or "set up work loops here"). Discovers the repo, renders `.agent-loops/`, emits runner artifacts, writes a Bootstrap Report.
-- **Tick mode** — invoked by the local foreground supervisor or a manual guarded tick, one role per invocation (`implementer` | `reviewer` | `fixer`). One tick = claim one item, do one unit of work, exit. Stateless between ticks.
+- **Setup and Arm mode** — invoked once per repo (`/autonomous-work-loops` or "set up work loops here"). Discovers the repo, renders `.agent-loops/`, creates labels, proves a smoke issue, and starts the managed local supervisor.
+- **Tick mode** — invoked by the managed local supervisor or a manual guarded tick, one role per invocation (`implementer` | `reviewer` | `fixer`). One tick = claim one item, do one unit of work, exit. Stateless between ticks.
 
-The skill never loops by itself. The *loop* is the foreground supervisor re-invoking tick mode. This is the single most important ecosystem fact: **we ship the brain (the skill) and a visible local heartbeat (the runner), not a daemon.**
+The skill never loops by itself. The *loop* is the generated local supervisor re-invoking tick mode. This is the single most important ecosystem fact: **we ship the brain (the skill) and a managed local heartbeat with status/stop controls, not a hosted service or unmanaged daemon.**
 
 ## 2. Prior art and differentiation
 
@@ -21,7 +21,7 @@ The official `claude-plugins-official` marketplace already ships **`ralph-loop`*
 |---|---|---|
 | Roles | one | three (implementer / reviewer / fixer) |
 | State | in-session memory | host state (labels + SHA markers), zero agent memory |
-| Persistence | dies with session | survives via host state and foreground re-ticks; resumable |
+| Persistence | dies with session | survives via host state and managed local re-ticks; resumable |
 | Convergence | completion promise | adversarial review + proof + cycle cap (ADR-0003/0010) |
 | Safety | none specific | trust-gated intake, proof precondition, human gates, budget walls |
 | Multi-machine | no | claim atomicity via branch-ref push (ADR-0008) |
@@ -64,15 +64,15 @@ Too much machinery for a folder of markdown; the security-conscious audience (ru
 
 ## 5. Runner / heartbeat hosting (the part users actually operate)
 
-The skill emits runner artifacts; it does not host a daemon. Per ADR-0007 the runner is also the budget wall. Bootstrap should offer one V1 execution surface:
+The skill emits runner artifacts; it does not host a service. Per ADR-0007 the runner is also the budget wall. Bootstrap should offer one V1 execution surface:
 
-1. **Local foreground supervisor** — the user starts one terminal process; it cycles guarded implementer/reviewer/fixer ticks until stopped.
+1. **Managed local supervisor** — setup starts one local process with `.agent-loops/supervisor.pid`, logs, `--status`, and `--stop`; it cycles guarded implementer/reviewer/fixer ticks until stopped.
 
 Manual guarded ticks remain the debugging surface, not the product happy path. Codex Automations and Claude `/loop` are excluded from V1 so every harness app follows the same setup path. Local system cron is excluded from V1 because it needs owned install/update/uninstall and cleanup semantics. GitHub Actions scheduling is also excluded from V1; a hosted CI or bot runner has enough credential, billing, and operational surface to be a separate project unless a later design explicitly adopts it.
 
 The skill ships this as **templates in `assets/runners/`**, rendered with the repo's discovered values during bootstrap.
 
-Headless agents load the skill by prompt, not by phantom `--skill`/`--role` flags. The rendered foreground supervisor should invoke a guarded role runner, and that runner should invoke the agent command with a bounded context prompt and wrap that invocation in the external wall.
+Headless agents load the skill by prompt, not by phantom `--skill`/`--role` flags. The rendered supervisor should invoke a guarded role runner, and that runner should invoke the agent command with a bounded context prompt and wrap that invocation in the external wall.
 
 ## 6. Credentials & blast radius (ecosystem-level reminder)
 
@@ -85,5 +85,5 @@ Because tick mode runs unattended with whatever credentials the runner has:
 
 - **Package**: single git repo, skill-folder-at-root layout (Option B), with a `.claude-plugin/` wrapper for marketplace install (Option C overall).
 - **Install**: `install.sh` symlinks one clone into all three skill dirs; `/plugin` for Claude users.
-- **Heartbeat**: V1 starts one local foreground supervisor. Manual guarded ticks are retained for debugging.
+- **Heartbeat**: V1 starts one managed local supervisor. Manual guarded ticks are retained for debugging.
 - **Lead marketing message**: multi-agent converging PR factory vs. ralph-loop's single-agent retry.

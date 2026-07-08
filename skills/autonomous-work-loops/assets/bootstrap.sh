@@ -367,14 +367,14 @@ critical_label_text = (
     else "GitHub labels are not created by bootstrap."
 )
 guided_action_lines = (
-    "- Guided actions:\n"
+    "- Completed by setup:\n"
     "  - Labels: create/update via `.agent-loops/setup-labels.sh`\n"
     "  - Doctor: run `.agent-loops/doctor.sh`\n"
     "  - Smoke issue: create from `.agent-loops/FIRST-TRIAL-ISSUE.md`\n"
     "  - Supervisor: run `.agent-loops/runners/local-supervisor.sh --once \"$PWD\"`\n"
     + ("  - Managed watch: start `.agent-loops/runners/local-supervisor.sh --background \"$PWD\"`\n" if arm else "")
     if guided
-    else "- Guided actions: not requested"
+    else "- Completed by setup: render `.agent-loops/` only; no GitHub mutation or supervisor tick requested"
 )
 
 report = f"""# Autonomous Work Loops Bootstrap Report
@@ -407,9 +407,10 @@ report = f"""# Autonomous Work Loops Bootstrap Report
   - repo-specific rules: read discovered instruction files before every tick
 - Doctor: {doctor_text}
 - First trial issue: `.agent-loops/FIRST-TRIAL-ISSUE.md`
-- First trial command:
-  - one-command guided path: `{assets_dir}/bootstrap.sh --guided "{target}"`
+- Normal setup command:
   - one-command arm path: `{assets_dir}/bootstrap.sh --arm "{target}"`
+- Recovery/debug commands:
+  - one-command guided path: `{assets_dir}/bootstrap.sh --guided "{target}"`
   - `gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready`
   - `.agent-loops/runners/local-supervisor.sh --once "$PWD"`
   - watch mode after the smoke test: `.agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"`
@@ -491,6 +492,7 @@ if [ "$guided" -eq 1 ]; then
   smoke_issue_url="$(cd "$target" && gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready)"
   printf 'guided setup: created %s\n' "$smoke_issue_url"
   smoke_issue="${smoke_issue_url##*/}"
+  repo_slug="$(cd "$target" && gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
   printf 'guided setup: waiting for smoke issue #%s to be visible with label ready\n' "$smoke_issue"
   deadline=$(( $(date +%s) + 60 ))
   while true; do
@@ -498,6 +500,13 @@ if [ "$guided" -eq 1 ]; then
       break
     fi
     if [ "$(date +%s)" -ge "$deadline" ]; then
+      if [ -n "$repo_slug" ]; then
+        failure_body="autonomous-work-loops guided setup created this smoke issue, but GitHub did not report it with the ready label before the setup timeout. Inspect the issue labels and rerun bootstrap with --arm after GitHub state settles."
+        (cd "$target" && gh issue comment "$smoke_issue" --repo "$repo_slug" --body "$failure_body" >/dev/null 2>&1 || true)
+        (cd "$target" && gh issue edit "$smoke_issue" --repo "$repo_slug" --remove-label ready >/dev/null 2>&1 || true)
+        (cd "$target" && gh issue edit "$smoke_issue" --repo "$repo_slug" --add-label stalled >/dev/null 2>&1 || true)
+        printf 'guided setup: marked smoke issue #%s as stalled after visibility timeout\n' "$smoke_issue" >&2
+      fi
       printf 'guided setup: smoke issue #%s was not visible with label ready before timeout\n' "$smoke_issue" >&2
       exit 1
     fi
@@ -506,7 +515,6 @@ if [ "$guided" -eq 1 ]; then
   printf 'guided setup: running one supervisor tick\n'
   supervisor_rc=0
   (cd "$target" && "$dest/runners/local-supervisor.sh" --once "$target") || supervisor_rc=$?
-  repo_slug="$(cd "$target" && gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)"
   branch="loop/impl/issue-${smoke_issue}"
   pr_url=""
   issue_labels=""
@@ -521,6 +529,14 @@ if [ "$guided" -eq 1 ]; then
     printf 'guided setup: no PR was opened; inspect issue #%s and .agent-loops/evidence/prove-the-gate/logs/\n' "$smoke_issue"
   fi
   if [ "$supervisor_rc" -ne 0 ]; then
+    if [ -n "$repo_slug" ]; then
+      failure_body="autonomous-work-loops guided setup created this smoke issue, but the one-shot supervisor exited with ${supervisor_rc} before the repo could be armed. Inspect .agent-loops/evidence/prove-the-gate/logs/ locally, then rerun .agent-loops/runners/local-supervisor.sh --status \"$target\" or bootstrap with --arm again after fixing setup."
+      (cd "$target" && gh issue comment "$smoke_issue" --repo "$repo_slug" --body "$failure_body" >/dev/null 2>&1 || true)
+      (cd "$target" && gh issue edit "$smoke_issue" --repo "$repo_slug" --remove-label ready >/dev/null 2>&1 || true)
+      (cd "$target" && gh issue edit "$smoke_issue" --repo "$repo_slug" --remove-label in-progress >/dev/null 2>&1 || true)
+      (cd "$target" && gh issue edit "$smoke_issue" --repo "$repo_slug" --add-label stalled >/dev/null 2>&1 || true)
+      printf 'guided setup: marked smoke issue #%s as stalled after setup failure\n' "$smoke_issue" >&2
+    fi
     printf 'guided setup: supervisor exited with %s; setup needs attention before watch mode.\n' "$supervisor_rc" >&2
     exit "$supervisor_rc"
   fi

@@ -2,7 +2,7 @@
 
 This context defines the language for a portable skill that helps agents set up autonomous work loops in a software repository.
 
-Current V1 is a narrow subset of this broader language: GitHub only, one local foreground supervisor runner surface, guarded local role engines, no Codex Automations, no Claude `/loop`, no cron/launchd/GitHub Actions scheduler, no Maintainer Loop, no Core Memory regeneration, and no `loopctl`. Broader execution profiles and host schedulers are V2 planning vocabulary unless a current V1 doc explicitly says otherwise.
+Current V1 is a narrow subset of this broader language: GitHub only, one managed local supervisor runner surface, guarded local role engines, no Codex Automations, no Claude `/loop`, no cron/launchd/GitHub Actions scheduler, no Maintainer Loop, no Core Memory regeneration, and no `loopctl`. Broader execution profiles and host schedulers are V2 planning vocabulary unless a current V1 doc explicitly says otherwise.
 
 ## Language
 
@@ -87,7 +87,7 @@ An added loop role or specialization that plugs into the core loop system withou
 _Avoid_: Forked loop system, hardcoded special case
 
 **Execution Surface**:
-The place where loops run. In V1 this is the local foreground supervisor. Host CI, host schedulers, Codex Automations, Claude `/loop`, Cursor sessions, OpenCode sessions, and servers are V2 or future execution surfaces unless explicitly adopted by a later design.
+The place where loops run. In V1 this is the managed local supervisor. Host CI, host schedulers, Codex Automations, Claude `/loop`, Cursor sessions, OpenCode sessions, and servers are V2 or future execution surfaces unless explicitly adopted by a later design.
 _Avoid_: Required runtime, single blessed platform
 
 **Credential Profile**:
@@ -127,7 +127,7 @@ A small repo-local command that handles deterministic loop mechanics such as rec
 _Avoid_: Large runtime framework, hidden daemon, manual JSON editing
 
 **Execution Profile**:
-An editable configuration entry that describes where and how a loop can run. V1 creates the local foreground supervisor path only. Host CI or scheduler profiles are V2 planning.
+An editable configuration entry that describes where and how a loop can run. V1 creates the managed local supervisor path only. Host CI or scheduler profiles are V2 planning.
 _Avoid_: Single runtime assumption, daemon-first setup
 
 **Bootstrap Report**:

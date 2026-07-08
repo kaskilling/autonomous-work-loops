@@ -96,6 +96,28 @@ esac
 state_dir="${repo}/.agent-loops"
 logs_dir="${state_dir}/evidence/prove-the-gate/logs"
 pid_file="${state_dir}/supervisor.pid"
+status_file="${state_dir}/supervisor.status"
+supervisor_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+write_status() {
+  local state="$1" last_tick_rc="${2:-}" last_log="${3:-}" status_pid="${4:-}" now tmp
+  now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  [ -n "$status_pid" ] || status_pid="$(read_pid 2>/dev/null || true)"
+  [ -n "$status_pid" ] || status_pid="$$"
+  mkdir -p "$state_dir"
+  tmp="${status_file}.$$"
+  {
+    printf 'state=%s\n' "$state"
+    printf 'pid=%s\n' "$status_pid"
+    printf 'started_at=%s\n' "$supervisor_started_at"
+    printf 'updated_at=%s\n' "$now"
+    printf 'last_tick_at=%s\n' "$now"
+    printf 'last_tick_rc=%s\n' "$last_tick_rc"
+    printf 'selected_runner=%s\n' "${runner:-}"
+    printf 'last_log=%s\n' "$last_log"
+  } >"$tmp"
+  mv "$tmp" "$status_file"
+}
 
 read_pid() {
   [ -f "$pid_file" ] || return 1
@@ -118,15 +140,23 @@ managed_status() {
     echo "managed supervisor running: pid=${pid}"
     echo "pid file: ${pid_file}"
     echo "logs: ${logs_dir}"
+    if [ -f "$status_file" ]; then
+      echo "status file: ${status_file}"
+      sed 's/^/  /' "$status_file"
+    else
+      echo "status file: ${status_file} (missing)"
+    fi
     return 0
   fi
   if [ -n "$pid" ]; then
     echo "managed supervisor not running; stale pid=${pid}"
     echo "pid file: ${pid_file}"
+    [ -f "$status_file" ] && { echo "last status:"; sed 's/^/  /' "$status_file"; }
     return 1
   fi
   echo "managed supervisor not running"
   echo "pid file: ${pid_file}"
+  [ -f "$status_file" ] && { echo "last status:"; sed 's/^/  /' "$status_file"; }
   return 1
 }
 
@@ -141,6 +171,7 @@ managed_stop() {
   if ! pid_is_running "$pid"; then
     echo "managed supervisor is not running; clearing stale pid=${pid}"
     rm -f "$pid_file"
+    write_status stopped 0 "" "$pid"
     return 0
   fi
   echo "stopping managed supervisor pid=${pid}"
@@ -148,6 +179,7 @@ managed_stop() {
   for _ in 1 2 3 4 5 6 7 8 9 10; do
     if ! pid_is_running "$pid"; then
       rm -f "$pid_file"
+      write_status stopped 0 "" "$pid"
       echo "managed supervisor stopped"
       return 0
     fi
@@ -257,9 +289,10 @@ start_background() {
   log="${logs_dir}/local-supervisor-watch-$(date -u +%Y%m%d-%H%M%S).log"
   (
     cd "$repo"
-    nohup env AWL_ROLE_RUNNER="$runner" AWL_PREFLIGHT_ROLE_RUNNER=0 "$script_path" --watch --interval "$interval_seconds" "$repo" >>"$log" 2>&1 &
+    nohup env AWL_ROLE_RUNNER="$runner" AWL_PREFLIGHT_ROLE_RUNNER=0 AWL_SUPERVISOR_LOG="$log" "$script_path" --watch --interval "$interval_seconds" "$repo" >>"$log" 2>&1 &
     child=$!
     printf '%s\n' "$child" >"$pid_file"
+    write_status starting "" "$log" "$child"
   )
   pid="$(read_pid || true)"
   if [ -n "$pid" ] && pid_is_running "$pid"; then
@@ -281,6 +314,7 @@ fi
 run_tick() {
   local tick_failures=0 role_rc
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  write_status tick-started "" "${AWL_SUPERVISOR_LOG:-}"
   echo "[$ts] autonomous-work-loops supervisor tick"
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] role runner: $runner"
 
@@ -302,6 +336,7 @@ run_tick() {
     tick_failures=$((tick_failures + 1))
     echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] fixer exited with ${role_rc}"
   }
+  write_status tick-complete "$tick_failures" "${AWL_SUPERVISOR_LOG:-}"
   return "$tick_failures"
 }
 

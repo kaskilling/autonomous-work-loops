@@ -12,4 +12,4 @@ A skill is invoked once per conversation and ends, so it cannot *be* a long-runn
 - **Hard constraint: the agent carries zero memory between ticks.** Every tick must reconstruct all needed state from host state (labels, PR comments, checks, branch SHAs) and repo files (`.agent-loops/`). "Remembering last time" is only legal if it was written to the host or the repo.
 - The skill needs a clean bootstrap-vs-tick mode switch; tick mode must be idempotent.
 - This is the chosen path for recurring runner execution, not manual human re-invocation.
-- V1 has one runner surface: the local foreground supervisor. App-native schedulers such as Codex Automations and Claude `/loop`, plus system cron and GitHub Actions scheduling, are outside V1.
+- V1 has one runner surface: the managed local supervisor. App-native schedulers such as Codex Automations and Claude `/loop`, plus system cron and GitHub Actions scheduling, are outside V1.
