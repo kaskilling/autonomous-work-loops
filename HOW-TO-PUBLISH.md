@@ -23,7 +23,7 @@ gh repo create kaskilling/autonomous-work-loops --public --source=. --remote=ori
 
 Tag targeted-validation builds so installs can pin them:
 ```sh
-git tag v0.1.9 && git push origin v0.1.9
+git tag v0.1.10 && git push origin v0.1.10
 ```
 
 ---
@@ -36,7 +36,7 @@ Anyone clones and runs the installer. Works for all three tools.
 
 Tell users:
 ```sh
-git clone --branch v0.1.9 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.10 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -86,7 +86,7 @@ file to this one):
   "plugins": [
     {
       "name": "autonomous-work-loops",
-      "source": { "source": "git", "url": "https://github.com/kaskilling/autonomous-work-loops.git", "ref": "v0.1.9" },
+      "source": { "source": "git", "url": "https://github.com/kaskilling/autonomous-work-loops.git", "ref": "v0.1.10" },
       "category": "automation"
     }
   ]
@@ -96,7 +96,7 @@ file to this one):
 After that marketplace repository exists, users add its actual GitHub URL with
 `/plugin marketplace add ...`, then run `/plugin install autonomous-work-loops`.
 
-Pin `ref` to the **tag** (`v0.1.9`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
+Pin `ref` to the **tag** (`v0.1.10`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
 
 ### Channel E — Public discovery (the launch post)
 

@@ -4,6 +4,7 @@ Use Git tags and GitHub releases for frozen states instead of committing copied 
 
 Installable release train:
 
+- `v0.1.10` - Supervisor status now includes foreground/watch activity plus a current-work snapshot with issue, PR, phase, role, verdict, hosted checks, and next action.
 - `v0.1.9` - Documentation cleanup: pinned copy install by default, explicit plugin invocation notes, current prerequisites, and clearer release-marker guidance.
 - `v0.1.8` - Idempotent setup-and-arm reruns: existing `.agent-loops/` resumes without duplicate smoke issues; background durability docs now call out the persistent-terminal requirement.
 - `v0.1.7` - Live setup-and-arm release gate: external-review fixer cycle fix, `tts-compare` PR #2 reached `ready-for-human`, managed background status/stop verified in a persistent terminal.

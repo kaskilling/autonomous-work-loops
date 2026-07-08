@@ -43,7 +43,7 @@ guarded role runner.
 ## 2. Install The Skill
 
 ```sh
-git clone --branch v0.1.9 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.10 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -177,6 +177,10 @@ Create a GitHub issue from that template as a trusted actor, then apply `ready`.
 .agent-loops/runners/local-supervisor.sh --status "$PWD"
 .agent-loops/runners/local-supervisor.sh --stop "$PWD"
 ```
+
+`--status` reports both supervisor lifecycle and current work:
+`current_issue`, `current_pr`, `current_phase`, `last_role`, `last_verdict`,
+`hosted_checks`, and `next_action`.
 
 To run one visible tick:
 

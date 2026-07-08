@@ -84,7 +84,7 @@ codex --version || claude --version
 Install this skill if it is not already installed:
 
 ```sh
-git clone --branch v0.1.9 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.10 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```

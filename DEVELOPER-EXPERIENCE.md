@@ -19,7 +19,7 @@ codex --version || claude --version
 Install a fixed copy of the skill from a tagged release:
 
 ```sh
-git clone --branch v0.1.9 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.10 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -117,6 +117,9 @@ Normal setup starts managed background watch. Use:
 .agent-loops/runners/local-supervisor.sh --status "$PWD"
 .agent-loops/runners/local-supervisor.sh --stop "$PWD"
 ```
+
+The status command reports lifecycle plus the current work snapshot, including
+issue, PR, phase, last role, verdict, hosted checks, and next action.
 
 Run one visible tick:
 

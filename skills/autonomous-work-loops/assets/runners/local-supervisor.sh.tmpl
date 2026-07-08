@@ -97,6 +97,7 @@ state_dir="${repo}/.agent-loops"
 logs_dir="${state_dir}/evidence/prove-the-gate/logs"
 pid_file="${state_dir}/supervisor.pid"
 status_file="${state_dir}/supervisor.status"
+work_status_file="${state_dir}/supervisor.work"
 supervisor_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 write_status() {
@@ -109,6 +110,8 @@ write_status() {
   {
     printf 'state=%s\n' "$state"
     printf 'pid=%s\n' "$status_pid"
+    printf 'mode=%s\n' "$mode"
+    printf 'action=%s\n' "$action"
     printf 'started_at=%s\n' "$supervisor_started_at"
     printf 'updated_at=%s\n' "$now"
     printf 'last_tick_at=%s\n' "$now"
@@ -117,6 +120,40 @@ write_status() {
     printf 'last_log=%s\n' "$last_log"
   } >"$tmp"
   mv "$tmp" "$status_file"
+}
+
+status_value() {
+  local file="$1" key="$2"
+  [ -f "$file" ] || return 1
+  sed -n "s/^${key}=//p" "$file" | tail -1
+}
+
+print_status_snapshot() {
+  local pid="${1:-}" state status_pid mode
+  if [ -f "$status_file" ]; then
+    echo "last supervisor activity:"
+    sed 's/^/  /' "$status_file"
+    state="$(status_value "$status_file" state || true)"
+    status_pid="$(status_value "$status_file" pid || true)"
+    mode="$(status_value "$status_file" mode || true)"
+    if [ "$state" = "tick-started" ] && { [ -z "$status_pid" ] || ! pid_is_running "$status_pid"; }; then
+      echo "derived_state=interrupted/stale"
+      echo "next_action=run one tick or start foreground watch to resume classification"
+    elif [ -n "$pid" ] && [ -n "$status_pid" ] && [ "$pid" != "$status_pid" ]; then
+      echo "note=last activity was not written by the managed background pid"
+    elif [ "$mode" = "watch" ] && { [ -z "$pid" ] || ! pid_is_running "$pid"; }; then
+      echo "note=last activity may be from a foreground watcher or a stopped watch session"
+    fi
+  else
+    echo "last supervisor activity: (missing)"
+  fi
+
+  if [ -f "$work_status_file" ]; then
+    echo "current work snapshot:"
+    sed 's/^/  /' "$work_status_file"
+  else
+    echo "current work snapshot: (missing)"
+  fi
 }
 
 read_pid() {
@@ -140,23 +177,19 @@ managed_status() {
     echo "managed supervisor running: pid=${pid}"
     echo "pid file: ${pid_file}"
     echo "logs: ${logs_dir}"
-    if [ -f "$status_file" ]; then
-      echo "status file: ${status_file}"
-      sed 's/^/  /' "$status_file"
-    else
-      echo "status file: ${status_file} (missing)"
-    fi
+    echo "status file: ${status_file}"
+    print_status_snapshot "$pid"
     return 0
   fi
   if [ -n "$pid" ]; then
     echo "managed supervisor not running; stale pid=${pid}"
     echo "pid file: ${pid_file}"
-    [ -f "$status_file" ] && { echo "last status:"; sed 's/^/  /' "$status_file"; }
+    print_status_snapshot "$pid"
     return 1
   fi
   echo "managed supervisor not running"
   echo "pid file: ${pid_file}"
-  [ -f "$status_file" ] && { echo "last status:"; sed 's/^/  /' "$status_file"; }
+  print_status_snapshot ""
   return 1
 }
 
@@ -312,7 +345,9 @@ if [ "$action" = "background" ]; then
 fi
 
 run_tick() {
-  local tick_failures=0 role_rc
+  local tick_failures=0 role_rc final_state current_phase
+  tick_in_progress=1
+  trap 'rc=$?; if [ "${tick_in_progress:-0}" = 1 ]; then write_status interrupted "$rc" "${AWL_SUPERVISOR_LOG:-}"; fi; exit "$rc"' INT TERM HUP
   ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   write_status tick-started "" "${AWL_SUPERVISOR_LOG:-}"
   echo "[$ts] autonomous-work-loops supervisor tick"
@@ -336,7 +371,17 @@ run_tick() {
     tick_failures=$((tick_failures + 1))
     echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] fixer exited with ${role_rc}"
   }
-  write_status tick-complete "$tick_failures" "${AWL_SUPERVISOR_LOG:-}"
+  final_state="tick-complete"
+  if [ "$tick_failures" -gt 0 ]; then
+    final_state="tick-failed"
+  fi
+  current_phase="$(status_value "$work_status_file" current_phase || true)"
+  if [ "$current_phase" = "checks-pending" ]; then
+    final_state="checks-pending"
+  fi
+  write_status "$final_state" "$tick_failures" "${AWL_SUPERVISOR_LOG:-}"
+  tick_in_progress=0
+  trap - INT TERM HUP
   return "$tick_failures"
 }
 
