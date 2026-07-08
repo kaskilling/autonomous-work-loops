@@ -40,3 +40,7 @@ Before setting a human-handoff label, the reviewer waits for hosted PR checks up
 - Failed and not known to fail on the default branch: route to `needs-fix`.
 - Failed but the same check name is already failing on the default branch: set `ready-for-human-baseline-red` and include the baseline classification in the marker body.
 - Green, skipped, neutral, or absent checks: allow normal convergence after local review passes.
+
+Marker comments should be readable summaries, not raw logs. Keep the hidden
+`<!-- loop:... -->` marker machine-readable, then show a short verdict, reason,
+next action, and sanitized hosted-check or review excerpt when useful.

@@ -234,12 +234,123 @@ proof_summary() {
   fi
 }
 
+proof_public_status() {
+  local log="$1" rc="$2"
+  if [ "$rc" = 0 ]; then
+    printf 'Passed\n'
+  elif [ "$rc" = 2 ]; then
+    printf 'Missing configured proof command\n'
+  elif proof_setup_blocker "$log"; then
+    printf 'Blocked by local setup or harness state\n'
+  else
+    printf 'Failed\n'
+  fi
+}
+
+public_evidence_note() {
+  printf 'Local evidence stays on the runner host under `.agent-loops/evidence/prove-the-gate/logs/`.\n'
+}
+
+public_text_excerpt() {
+  local limit="${1:-60}" input
+  input="$(mktemp)"
+  cat >"$input"
+  python3 - "$repo" "$limit" "$input" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+repo = sys.argv[1]
+limit = int(sys.argv[2])
+path = Path(sys.argv[3])
+raw_lines = path.read_text(errors="replace").splitlines()
+
+def sanitize(line):
+    stripped = line.strip()
+    if not stripped:
+        return ""
+    if re.match(r"^hook:\s*", stripped, re.I):
+        return None
+    if re.match(r"^(PostToolUse|Stop)( Completed)?$", stripped, re.I):
+        return None
+    if re.match(r"^tokens used$", stripped, re.I):
+        return None
+    if re.match(r"^[0-9][0-9,]*$", stripped):
+        return None
+    line = line.replace(repo, "<repo>")
+    line = re.sub(r"/Users/[^ \t\r\n`]+", "<local-path>", line)
+    line = re.sub(r"/private/var/folders/[^ \t\r\n`]+", "<local-path>", line)
+    line = re.sub(r"/var/folders/[^ \t\r\n`]+", "<local-path>", line)
+    line = re.sub(r"^\s*[-*]\s+", "", line)
+    return line.rstrip()
+
+out = []
+last_blank = False
+for raw in raw_lines:
+    line = sanitize(raw)
+    if line is None:
+        continue
+    if line == "":
+        if out and not last_blank:
+            out.append("")
+        last_blank = True
+        continue
+    out.append(line)
+    last_blank = False
+
+while out and out[0] == "":
+    out.pop(0)
+while out and out[-1] == "":
+    out.pop()
+
+print("\n".join(out[-limit:]))
+PY
+  rm -f "$input"
+}
+
+public_log_excerpt() {
+  local log="$1" limit="${2:-60}"
+  [ -f "$log" ] || return 0
+  public_text_excerpt "$limit" <"$log"
+}
+
+public_excerpt_block() {
+  local title="$1" text="$2"
+  [ -n "$text" ] || return 0
+  printf '**%s**\n\n' "$title"
+  printf '```text\n%s\n```\n' "$text"
+}
+
+public_log_block() {
+  local title="$1" log="$2" limit="${3:-60}" text
+  text="$(public_log_excerpt "$log" "$limit")"
+  public_excerpt_block "$title" "$text"
+}
+
+public_hosted_check_block() {
+  local report="$1" text
+  text="$(printf '%s\n' "$report" | tail -n +2 | public_text_excerpt 80)"
+  public_excerpt_block "Hosted checks" "$text"
+}
+
+public_marker_body() {
+  local title="$1" verdict="$2" summary="$3" next_action="$4" details="${5:-}"
+  printf '### %s\n\n' "$title"
+  printf '**Verdict:** %s\n\n' "$verdict"
+  [ -n "$summary" ] && printf '%s\n\n' "$summary"
+  [ -n "$details" ] && printf '%s\n\n' "$details"
+  [ -n "$next_action" ] && printf '**Next action:** %s\n\n' "$next_action"
+  printf '<details>\n<summary>Local evidence</summary>\n\n'
+  public_evidence_note
+  printf '\n</details>\n'
+}
+
 post_pr_marker() {
   local pr="$1" marker="$2" body="$3" file
   file="$(mktemp)"
   {
     printf '%s\n\n' "$marker"
-    printf '%b\n' "$body"
+    printf '%s\n' "$body"
   } > "$file"
   gh pr comment "$pr" --body-file "$file" >/dev/null
   rm -f "$file"
@@ -250,7 +361,7 @@ post_issue_marker() {
   file="$(mktemp)"
   {
     printf '%s\n\n' "$marker"
-    printf '%b\n' "$body"
+    printf '%s\n' "$body"
   } > "$file"
   gh issue comment "$issue" --body-file "$file" >/dev/null
   rm -f "$file"
@@ -330,29 +441,33 @@ pr_timeout_count() {
 }
 
 handle_issue_timeout() {
-  local issue="$1" repo_slug="$2" branch="$3" role="$4" count
+  local issue="$1" repo_slug="$2" branch="$3" role="$4" count body
   count="$(issue_timeout_count "$issue" "$repo_slug")"
   count=$((count + 1))
   if [ "$count" -gt "$kill_retries" ]; then
-    post_issue_marker "$issue" "<!-- loop:${role} v=1 reviewed_sha=timeout verdict=stalled cycle=0 ts=$(ts) -->" "Guarded ${role} exceeded the external wall ${count} times. Routing to stalled."
+    body="$(public_marker_body "AWL ${role}" "Stalled" "The guarded ${role} exceeded the external wall ${count} times." "Human should inspect the local runner or reduce the issue scope.")"
+    post_issue_marker "$issue" "<!-- loop:${role} v=1 reviewed_sha=timeout verdict=stalled cycle=0 ts=$(ts) -->" "$body"
     set_issue_state "$issue" "$repo_slug" "$label_stalled"
   else
-    post_issue_marker "$issue" "<!-- loop:${role} v=1 reviewed_sha=timeout verdict=timeout cycle=0 ts=$(ts) -->" "Guarded ${role} exceeded the external wall on ${branch}. The next tick will reconstruct state and retry."
+    body="$(public_marker_body "AWL ${role}" "Timed out" "The guarded ${role} exceeded the external wall while working on \`${branch}\`." "The next tick will reconstruct state and retry.")"
+    post_issue_marker "$issue" "<!-- loop:${role} v=1 reviewed_sha=timeout verdict=timeout cycle=0 ts=$(ts) -->" "$body"
     set_issue_state "$issue" "$repo_slug" "$label_in_progress"
   fi
 }
 
 handle_pr_timeout() {
-  local pr="$1" repo_slug="$2" branch="$3" role="$4" cycle="$5" issue count
+  local pr="$1" repo_slug="$2" branch="$3" role="$4" cycle="$5" issue count body
   count="$(pr_timeout_count "$pr" "$repo_slug")"
   count=$((count + 1))
   if [ "$count" -gt "$kill_retries" ]; then
-    post_pr_marker "$pr" "<!-- loop:${role} v=1 reviewed_sha=timeout verdict=stalled cycle=${cycle} ts=$(ts) -->" "Guarded ${role} exceeded the external wall ${count} times. Routing to stalled."
+    body="$(public_marker_body "AWL ${role}" "Stalled" "The guarded ${role} exceeded the external wall ${count} times." "Human should inspect the local runner or reduce the PR scope.")"
+    post_pr_marker "$pr" "<!-- loop:${role} v=1 reviewed_sha=timeout verdict=stalled cycle=${cycle} ts=$(ts) -->" "$body"
     set_pr_state "$pr" "$repo_slug" "$label_stalled"
     issue="$(pr_issue_number "$pr" "$repo_slug" "$branch")"
     [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_stalled"
   else
-    post_pr_marker "$pr" "<!-- loop:${role} v=1 reviewed_sha=timeout verdict=timeout cycle=${cycle} ts=$(ts) -->" "Guarded ${role} exceeded the external wall. The next tick will reconstruct state and retry."
+    body="$(public_marker_body "AWL ${role}" "Timed out" "The guarded ${role} exceeded the external wall." "The next tick will reconstruct state and retry.")"
+    post_pr_marker "$pr" "<!-- loop:${role} v=1 reviewed_sha=timeout verdict=timeout cycle=${cycle} ts=$(ts) -->" "$body"
   fi
 }
 
@@ -599,7 +714,7 @@ After that, provide concise findings. Use blocking only for defects that should 
 }
 
 implementer() {
-  local repo_slug issue actor branch base title body claim_sha proof_log pr_body pr head_sha proof_rc log prompt_log timeout_count existing_pr retry_issue retry_actor retry_title
+  local repo_slug issue actor branch base title body claim_sha proof_log pr_body pr head_sha proof_rc log prompt_log timeout_count existing_pr retry_issue retry_actor retry_title details
   repo_slug="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
   retry_issue=""
   retry_actor=""
@@ -612,7 +727,8 @@ implementer() {
     branch="${branch_prefix}${issue}"
     timeout_count="$(issue_timeout_count "$issue" "$repo_slug")"
     if [ "${timeout_count:-0}" -gt "$kill_retries" ]; then
-      post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=timeout verdict=stalled cycle=0 ts=$(ts) -->" "Timed-out implementer claim exceeded kill_retries=${kill_retries}; routing to stalled for human recovery."
+      body="$(public_marker_body "AWL Implementer" "Stalled" "Timed-out implementer claim exceeded \`kill_retries=${kill_retries}\`." "Human should inspect the claim branch and runner state.")"
+      post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=timeout verdict=stalled cycle=0 ts=$(ts) -->" "$body"
       set_issue_state "$issue" "$repo_slug" "$label_stalled"
     elif [ "${timeout_count:-0}" -gt 0 ]; then
       existing_pr="$(gh pr list --repo "$repo_slug" --state open --head "$branch" --json number --jq '.[0].number // empty')"
@@ -621,7 +737,8 @@ implementer() {
           retry_issue="$issue"
           retry_actor="$actor"
           retry_title="$title"
-          post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=timeout verdict=retry cycle=0 ts=$(ts) -->" "Recovering timed-out implementer claim retry ${timeout_count}/${kill_retries}; no PR exists for ${branch}. Retrying this claim in the current tick."
+          body="$(public_marker_body "AWL Implementer" "Retrying" "Recovering timed-out implementer claim retry ${timeout_count}/${kill_retries}. No PR exists for \`${branch}\`." "Retry this claim in the current tick.")"
+          post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=timeout verdict=retry cycle=0 ts=$(ts) -->" "$body"
         else
           active_block=1
         fi
@@ -629,9 +746,8 @@ implementer() {
         active_block=1
       fi
     elif stale_issue "$repo_slug" "$issue"; then
-      gh issue comment "$issue" --repo "$repo_slug" --body "<!-- loop:implementer v=1 reviewed_sha=stale verdict=no-op cycle=0 ts=$(ts) -->
-
-Stale in-progress claim detected with no claim branch. Releasing the advisory label so the guarded runner can reclaim through the normal trust and branch-ref path." >/dev/null
+      body="$(public_marker_body "AWL Implementer" "Released stale claim" "Stale in-progress claim detected with no claim branch." "The guarded runner can reclaim through the normal trust and branch-ref path.")"
+      post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=stale verdict=no-op cycle=0 ts=$(ts) -->" "$body"
       gh issue edit "$issue" --repo "$repo_slug" --remove-label "$label_in_progress" --add-label "$label_ready" >/dev/null
     else
       active_block=1
@@ -701,7 +817,9 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     if [ "$codex_rc" -ne 0 ]; then
       if nested_agent_startup_blocker "$log"; then
         write_work_status "stalled" "#${issue}" "" "implementer" "stalled" "$log" "" "fix the local agent runtime or select another guarded role runner"
-        post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=startup verdict=stalled cycle=0 ts=$(ts) -->" "Guarded implementer could not start the nested agent. Use another generated runner with AWL_ROLE_RUNNER or fix the local agent runtime. Log: ${log}."
+        details="$(public_log_block "Runner excerpt" "$log" 40)"
+        body="$(public_marker_body "AWL Implementer" "Stalled" "The guarded implementer could not start the nested agent." "Use another generated runner with \`AWL_ROLE_RUNNER\` or fix the local agent runtime." "$details")"
+        post_issue_marker "$issue" "<!-- loop:implementer v=1 reviewed_sha=startup verdict=stalled cycle=0 ts=$(ts) -->" "$body"
         set_issue_state "$issue" "$repo_slug" "$label_stalled"
         echo "guarded implementer could not start nested agent for issue #${issue}; rc=${codex_rc}; see ${log}"
       else
@@ -734,13 +852,20 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     pr_body="$(mktemp)"
     {
       printf 'Closes #%s.\n\n' "$issue"
-      printf 'Proof:\n'
+      printf '### Proof\n\n'
+      printf '**Status:** %s\n\n' "$(proof_public_status "$proof_log" "$proof_rc")"
+      details="$(public_log_block "Proof excerpt" "$proof_log" 30)"
+      [ -n "$details" ] && printf '%s\n\n' "$details"
+      printf '<details>\n<summary>Local evidence</summary>\n\n'
+      public_evidence_note
+      printf '\n</details>\n'
+      printf '\n'
       if [ "$proof_rc" = 0 ]; then
-        tail -20 "$proof_log" | sed 's/^/- /'
+        :
       elif [ "$proof_rc" = 2 ]; then
-        printf -- '- no configured proof command; routing to unproven\n'
+        printf 'No configured proof command was found, so AWL will route this PR to a human gate.\n'
       else
-        tail -40 "$proof_log" | sed 's/^/- /'
+        :
       fi
     } > "$pr_body"
     pr="$(open_or_update_pr "$issue" "$branch" "$title" "$pr_body")"
@@ -749,20 +874,26 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
 
     if [ "$proof_rc" = 0 ]; then
       write_work_status "review-needed" "#${issue}" "#${pr}" "implementer" "proof-passed" "$proof_log" "" "reviewer will inspect the PR and hosted checks"
-      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-passed cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}. Prompt: ${prompt_log}. Proof passed; see ${proof_log}."
+      body="$(public_marker_body "AWL Implementer" "Proof passed" "Committed and pushed issue #${issue}." "Reviewer will inspect the PR and hosted checks.")"
+      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-passed cycle=0 ts=$(ts) -->" "$body"
     elif [ "$proof_rc" = 2 ]; then
       write_work_status "unproven" "#${issue}" "#${pr}" "implementer" "unproven" "$proof_log" "" "configure a human-accepted proof command"
-      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=unproven cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but no proof command is configured. Prompt: ${prompt_log}."
+      body="$(public_marker_body "AWL Implementer" "Unproven" "Committed and pushed issue #${issue}, but no proof command is configured." "Configure a human-accepted proof command before autonomous convergence.")"
+      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=unproven cycle=0 ts=$(ts) -->" "$body"
       set_issue_state "$issue" "$repo_slug" "$label_unproven"
       set_pr_state "$pr" "$repo_slug" "$label_unproven"
     elif proof_setup_blocker "$proof_log"; then
       write_work_status "stalled" "#${issue}" "#${pr}" "implementer" "stalled" "$proof_log" "" "fix local proof setup or harness state"
-      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=stalled cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but proof is blocked by local setup or harness state. Prompt: ${prompt_log}. Proof: ${proof_log}."
+      details="$(public_log_block "Proof excerpt" "$proof_log" 40)"
+      body="$(public_marker_body "AWL Implementer" "Stalled" "Committed and pushed issue #${issue}, but proof is blocked by local setup or harness state." "Fix local proof setup or harness state." "$details")"
+      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=stalled cycle=0 ts=$(ts) -->" "$body"
       set_issue_state "$issue" "$repo_slug" "$label_stalled"
       set_pr_state "$pr" "$repo_slug" "$label_stalled"
     else
       write_work_status "needs-fix" "#${issue}" "#${pr}" "implementer" "proof-failed" "$proof_log" "" "fixer should address proof failure"
-      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-failed cycle=0 ts=$(ts) -->" "Guarded implementer committed and pushed issue #${issue}, but proof failed. Prompt: ${prompt_log}. Proof: ${proof_log}."
+      details="$(public_log_block "Proof excerpt" "$proof_log" 40)"
+      body="$(public_marker_body "AWL Implementer" "Proof failed" "Committed and pushed issue #${issue}, but proof failed." "Fixer should address the proof failure." "$details")"
+      post_pr_marker "$pr" "<!-- loop:implementer v=1 reviewed_sha=${head_sha} verdict=proof-failed cycle=0 ts=$(ts) -->" "$body"
       set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
       set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
     fi
@@ -780,7 +911,7 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
 }
 
 reviewer() {
-  local repo_slug pr branch head proof_log proof_rc labels review_log review_rc cycle issue prior_verdict body_tail check_report check_state external_feedback
+  local repo_slug pr branch head proof_log proof_rc labels review_log review_rc cycle issue prior_verdict details body check_report check_state external_feedback
   repo_slug="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
   while IFS=$'\t' read -r pr branch labels; do
     [ -n "$pr" ] || continue
@@ -829,76 +960,94 @@ reviewer() {
         check_state="$(printf '%s\n' "$check_report" | sed -n '1p')"
         external_feedback="$(external_review_blockers "$pr" "$repo_slug" "$head")"
         if [ -n "$external_feedback" ]; then
-          body_tail="$(printf '%s\n' "$external_feedback" | sed 's/^/- /' | tail -40)"
+          details="$(public_excerpt_block "External review feedback" "$(printf '%s\n' "$external_feedback" | public_text_excerpt 40)")"
           cycle=$((cycle + 1))
           write_work_status "needs-fix" "${issue:+#${issue}}" "#${pr}" "reviewer" "needs-fix" "$review_log" "external-review" "fixer will address external inline bot comments"
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "External inline bot review comments arrived for the current head after local proof passed. Routing to fixer.\n${body_tail}"
+          body="$(public_marker_body "AWL Reviewer" "Needs fix" "External inline bot review comments arrived for the current head after local proof passed." "Fixer will address external inline bot comments." "$details")"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "$body"
           set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
         elif [ "$check_state" = "pending" ]; then
           write_work_status "checks-pending" "${issue:+#${issue}}" "#${pr}" "reviewer" "checks-pending" "$review_log" "$(printf '%s\n' "$check_report" | sed -n '2p')" "a later reviewer tick will re-check hosted checks"
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=checks-pending cycle=${cycle} ts=$(ts) -->" "Local proof and autonomous review passed, but hosted checks are still pending after ${hosted_check_wait_seconds}s. A later reviewer tick should re-check before human handoff.\n$(printf '%s\n' "$check_report" | tail -n +2)"
+          details="$(public_hosted_check_block "$check_report")"
+          body="$(public_marker_body "AWL Reviewer" "Checks pending" "Local proof and autonomous review passed, but hosted checks were still pending after ${hosted_check_wait_seconds}s." "A later reviewer tick will re-check hosted checks before human handoff." "$details")"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=checks-pending cycle=${cycle} ts=$(ts) -->" "$body"
         elif [ "$check_state" = "failed" ]; then
           cycle=$((cycle + 1))
           write_work_status "needs-fix" "${issue:+#${issue}}" "#${pr}" "reviewer" "needs-fix" "$review_log" "$(printf '%s\n' "$check_report" | sed -n '2p')" "fix hosted check failures or classify the baseline"
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Local proof passed, but hosted checks failed and do not match a known default-branch baseline failure.\n$(printf '%s\n' "$check_report" | tail -n +2)"
+          details="$(public_hosted_check_block "$check_report")"
+          body="$(public_marker_body "AWL Reviewer" "Needs fix" "Local proof passed, but hosted checks failed and do not match a known default-branch baseline failure." "Fix hosted check failures or update the baseline classification." "$details")"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "$body"
           set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
         elif [ "$check_state" = "baseline-failed" ]; then
           write_work_status "ready-for-human-baseline-red" "${issue:+#${issue}}" "#${pr}" "reviewer" "ready-for-human-baseline-red" "$review_log" "$(printf '%s\n' "$check_report" | sed -n '2p')" "human should review baseline-red PR before merge"
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=ready-for-human-baseline-red cycle=${cycle} ts=$(ts) -->" "Guarded reviewer reran proof and adversarial review found no blocking defects. Hosted checks failed only where the default branch is already red. Prompt: ${review_log%.log}-prompt.log. Proof: ${proof_log}. Review: ${review_log}.\n$(printf '%s\n' "$check_report" | tail -n +2)"
+          details="$(public_hosted_check_block "$check_report")"
+          body="$(public_marker_body "AWL Reviewer" "Ready for human, baseline red" "Local proof passed and autonomous review found no blocking defects. Hosted checks failed only where the default branch is already red." "Human should review the baseline-red PR before merge." "$details")"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=ready-for-human-baseline-red cycle=${cycle} ts=$(ts) -->" "$body"
           set_pr_state "$pr" "$repo_slug" "$label_ready_for_human_baseline_red"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_ready_for_human_baseline_red"
         else
           write_work_status "ready-for-human" "${issue:+#${issue}}" "#${pr}" "reviewer" "ready-for-human" "$review_log" "$(printf '%s\n' "$check_report" | sed -n '2p')" "human should review and merge if acceptable"
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=ready-for-human cycle=${cycle} ts=$(ts) -->" "Guarded reviewer reran proof and adversarial review found no blocking defects. Prompt: ${review_log%.log}-prompt.log. Proof: ${proof_log}. Review: ${review_log}.\n$(printf '%s\n' "$check_report" | tail -n +2)"
+          details="$(public_hosted_check_block "$check_report")"
+          body="$(public_marker_body "AWL Reviewer" "Ready for human" "Local proof passed, autonomous review found no blocking defects, and hosted checks are green, neutral, skipped, or absent." "Human should review and merge if acceptable." "$details")"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=ready-for-human cycle=${cycle} ts=$(ts) -->" "$body"
           set_pr_state "$pr" "$repo_slug" "$label_ready_for_human"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_ready_for_human"
         fi
       elif [ "$review_rc" = 10 ]; then
-        body_tail="$(tail -40 "$review_log" | sed 's/^/- /')"
+        details="$(public_log_block "Review excerpt" "$review_log" 80)"
         if [ "$cycle" -ge "$max_cycles" ]; then
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=did-not-converge cycle=${cycle} ts=$(ts) -->" "Blocking defects remain at the cycle cap. Prompt: ${review_log%.log}-prompt.log. Review: ${review_log}.\n${body_tail}"
+          body="$(public_marker_body "AWL Reviewer" "Did not converge" "Blocking defects remain at the cycle cap." "Human must resolve the blocking review findings." "$details")"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=did-not-converge cycle=${cycle} ts=$(ts) -->" "$body"
           write_work_status "did-not-converge" "${issue:+#${issue}}" "#${pr}" "reviewer" "did-not-converge" "$review_log" "" "human must resolve blocking review findings"
           set_pr_state "$pr" "$repo_slug" "$label_did_not_converge"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_did_not_converge"
         else
           cycle=$((cycle + 1))
           write_work_status "needs-fix" "${issue:+#${issue}}" "#${pr}" "reviewer" "needs-fix" "$review_log" "" "fixer will address blocking review findings"
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Guarded reviewer found blocking defects. Prompt: ${review_log%.log}-prompt.log. Proof: ${proof_log}. Review: ${review_log}.\n${body_tail}"
+          body="$(public_marker_body "AWL Reviewer" "Needs fix" "Autonomous review found blocking defects." "Fixer will address the blocking review findings." "$details")"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "$body"
           set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
         fi
       else
-        body_tail="$(tail -40 "$review_log" | sed 's/^/- /')"
+        details="$(public_log_block "Review excerpt" "$review_log" 80)"
         if nested_agent_startup_blocker "$review_log"; then
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "Guarded reviewer could not start the nested agent. Use another generated runner with AWL_ROLE_RUNNER or fix the local agent runtime. Prompt: ${review_log%.log}-prompt.log. Review: ${review_log}.\n${body_tail}"
+          body="$(public_marker_body "AWL Reviewer" "Stalled" "The guarded reviewer could not start the nested agent." "Use another generated runner with \`AWL_ROLE_RUNNER\` or fix the local agent runtime." "$details")"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "$body"
           write_work_status "stalled" "${issue:+#${issue}}" "#${pr}" "reviewer" "stalled" "$review_log" "" "fix local agent runtime or select another guarded role runner"
           set_pr_state "$pr" "$repo_slug" "$label_stalled"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_stalled"
         else
           cycle=$((cycle + 1))
           write_work_status "needs-fix" "${issue:+#${issue}}" "#${pr}" "reviewer" "needs-fix" "$review_log" "" "fixer should inspect unparseable review output"
-          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Guarded reviewer could not parse a clean review verdict, so it is routing to fixer instead of approving. Prompt: ${review_log%.log}-prompt.log. Review: ${review_log}.\n${body_tail}"
+          body="$(public_marker_body "AWL Reviewer" "Needs fix" "The reviewer output did not contain a parseable clean verdict, so AWL is routing to fixer instead of approving." "Fixer should inspect the unparseable review output." "$details")"
+          post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "$body"
           set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
           [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
         fi
       fi
     elif [ "$proof_rc" = 2 ]; then
       write_work_status "unproven" "" "#${pr}" "reviewer" "unproven" "$proof_log" "" "configure a human-accepted proof command"
-      post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=unproven cycle=0 ts=$(ts) -->" "Guarded reviewer found no configured proof command."
+      body="$(public_marker_body "AWL Reviewer" "Unproven" "The reviewer found no configured proof command." "Configure a human-accepted proof command before autonomous convergence.")"
+      post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=unproven cycle=0 ts=$(ts) -->" "$body"
       set_pr_state "$pr" "$repo_slug" "$label_unproven"
       issue="$(pr_issue_number "$pr" "$repo_slug" "$branch")"
       [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_unproven"
     elif proof_setup_blocker "$proof_log"; then
       write_work_status "stalled" "" "#${pr}" "reviewer" "stalled" "$proof_log" "" "fix local proof setup or harness state"
-      post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "Guarded reviewer proof is blocked by local setup or harness state; see ${proof_log}."
+      details="$(public_log_block "Proof excerpt" "$proof_log" 40)"
+      body="$(public_marker_body "AWL Reviewer" "Stalled" "Reviewer proof is blocked by local setup or harness state." "Fix local proof setup or harness state." "$details")"
+      post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "$body"
       set_pr_state "$pr" "$repo_slug" "$label_stalled"
       issue="$(pr_issue_number "$pr" "$repo_slug" "$branch")"
       [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_stalled"
     else
       if [ "$cycle" -ge "$max_cycles" ]; then
-        post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=did-not-converge cycle=${cycle} ts=$(ts) -->" "Proof still fails at the cycle cap; see ${proof_log}."
+        details="$(public_log_block "Proof excerpt" "$proof_log" 40)"
+        body="$(public_marker_body "AWL Reviewer" "Did not converge" "Proof still fails at the cycle cap." "Human must resolve the proof failure." "$details")"
+        post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=did-not-converge cycle=${cycle} ts=$(ts) -->" "$body"
         write_work_status "did-not-converge" "" "#${pr}" "reviewer" "did-not-converge" "$proof_log" "" "human must resolve proof failure"
         set_pr_state "$pr" "$repo_slug" "$label_did_not_converge"
         issue="$(pr_issue_number "$pr" "$repo_slug" "$branch")"
@@ -906,7 +1055,9 @@ reviewer() {
       else
         cycle=$((cycle + 1))
         write_work_status "needs-fix" "" "#${pr}" "reviewer" "proof-failed" "$proof_log" "" "fixer should address proof failure"
-        post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "Guarded reviewer reran proof and it failed; see ${proof_log}."
+        details="$(public_log_block "Proof excerpt" "$proof_log" 40)"
+        body="$(public_marker_body "AWL Reviewer" "Needs fix" "Reviewer proof failed." "Fixer should address the proof failure." "$details")"
+        post_pr_marker "$pr" "<!-- loop:reviewer v=1 reviewed_sha=${head} verdict=needs-fix cycle=${cycle} ts=$(ts) -->" "$body"
         set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
         issue="$(pr_issue_number "$pr" "$repo_slug" "$branch")"
         [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
@@ -921,7 +1072,7 @@ reviewer() {
 }
 
 fixer() {
-  local repo_slug pr branch head proof_log proof_rc labels cycle prior_terminal prior_verdict prior_cycle blocker_cycle issue log prompt base body feedback body_tail
+  local repo_slug pr branch head proof_log proof_rc labels cycle prior_terminal prior_verdict prior_cycle blocker_cycle issue log prompt base body feedback details
   repo_slug="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
   while IFS=$'\t' read -r pr branch labels; do
     [ -n "$pr" ] || continue
@@ -986,7 +1137,9 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
     if [ "$codex_rc" -ne 0 ]; then
       if nested_agent_startup_blocker "$log"; then
         write_work_status "stalled" "${issue:+#${issue}}" "#${pr}" "fixer" "stalled" "$log" "" "fix local agent runtime or select another guarded role runner"
-        post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "Guarded fixer could not start the nested agent. Use another generated runner with AWL_ROLE_RUNNER or fix the local agent runtime. Log: ${log}."
+        details="$(public_log_block "Runner excerpt" "$log" 40)"
+        body="$(public_marker_body "AWL Fixer" "Stalled" "The guarded fixer could not start the nested agent." "Use another generated runner with \`AWL_ROLE_RUNNER\` or fix the local agent runtime." "$details")"
+        post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "$body"
         set_pr_state "$pr" "$repo_slug" "$label_stalled"
         [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_stalled"
         echo "guarded fixer could not start nested agent for PR #${pr}; rc=${codex_rc}; see ${log}"
@@ -1015,30 +1168,36 @@ Edit the working tree only. Do not run git. Do not run gh. Do not create commits
 
     if [ "$proof_rc" = 0 ]; then
       write_work_status "review-needed" "${issue:+#${issue}}" "#${pr}" "fixer" "fixed" "$proof_log" "" "reviewer will re-check the fixed head"
-      post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=fixed cycle=${cycle} ts=$(ts) -->" "Guarded fixer addressed PR #${pr}; proof passed. Prompt: ${prompt_log}. Fix log: ${log}. Proof: ${proof_log}."
+      body="$(public_marker_body "AWL Fixer" "Fixed" "Addressed PR #${pr}; proof passed." "Reviewer will re-check the fixed head.")"
+      post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=fixed cycle=${cycle} ts=$(ts) -->" "$body"
       set_pr_state "$pr" "$repo_slug" "$label_in_progress"
       [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_in_progress"
     elif [ "$proof_rc" = 2 ]; then
       write_work_status "unproven" "${issue:+#${issue}}" "#${pr}" "fixer" "unproven" "$proof_log" "" "configure a human-accepted proof command"
-      post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=unproven cycle=${cycle} ts=$(ts) -->" "Guarded fixer found no configured proof command."
+      body="$(public_marker_body "AWL Fixer" "Unproven" "The fixer found no configured proof command." "Configure a human-accepted proof command before autonomous convergence.")"
+      post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=unproven cycle=${cycle} ts=$(ts) -->" "$body"
       set_pr_state "$pr" "$repo_slug" "$label_unproven"
       [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_unproven"
     elif proof_setup_blocker "$proof_log"; then
       write_work_status "stalled" "${issue:+#${issue}}" "#${pr}" "fixer" "stalled" "$proof_log" "" "fix local proof setup or harness state"
-      post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "Guarded fixer proof is blocked by local setup or harness state; see ${proof_log}."
+      details="$(public_log_block "Proof excerpt" "$proof_log" 40)"
+      body="$(public_marker_body "AWL Fixer" "Stalled" "Fixer proof is blocked by local setup or harness state." "Fix local proof setup or harness state." "$details")"
+      post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=stalled cycle=${cycle} ts=$(ts) -->" "$body"
       set_pr_state "$pr" "$repo_slug" "$label_stalled"
       [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_stalled"
     else
-      body_tail="$(tail -40 "$proof_log" | sed 's/^/- /')"
+      details="$(public_log_block "Proof excerpt" "$proof_log" 40)"
       if [ "$cycle" -ge "$max_cycles" ]; then
         write_work_status "did-not-converge" "${issue:+#${issue}}" "#${pr}" "fixer" "did-not-converge" "$proof_log" "" "human must resolve proof failure"
-        post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=did-not-converge cycle=${cycle} ts=$(ts) -->" "Guarded fixer proof still failed at the cycle cap; see ${proof_log}.\n${body_tail}"
+        body="$(public_marker_body "AWL Fixer" "Did not converge" "Fixer proof still failed at the cycle cap." "Human must resolve the proof failure." "$details")"
+        post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=did-not-converge cycle=${cycle} ts=$(ts) -->" "$body"
         set_pr_state "$pr" "$repo_slug" "$label_did_not_converge"
         [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_did_not_converge"
       else
         cycle=$((cycle + 1))
         write_work_status "needs-fix" "${issue:+#${issue}}" "#${pr}" "fixer" "proof-failed" "$proof_log" "" "fixer should retry proof failure on a later cycle"
-        post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=proof-failed cycle=${cycle} ts=$(ts) -->" "Guarded fixer ran proof and it still failed; see ${proof_log}.\n${body_tail}"
+        body="$(public_marker_body "AWL Fixer" "Proof failed" "Fixer proof still failed." "A later fixer cycle should retry or a human should inspect the failure." "$details")"
+        post_pr_marker "$pr" "<!-- loop:fixer v=1 reviewed_sha=${head} verdict=proof-failed cycle=${cycle} ts=$(ts) -->" "$body"
         set_pr_state "$pr" "$repo_slug" "$label_needs_fix"
         [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_needs_fix"
       fi

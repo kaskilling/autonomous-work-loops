@@ -37,6 +37,18 @@ excerpt: "<capped relevant text>"
 
 Keep excerpts short and specific. Do not copy secrets, tokens, private keys, or unrelated logs.
 
+## Public Comments
+
+GitHub issue and PR comments are a public product surface. Post structured
+summaries with verdict, short reason, next action, and sanitized excerpts only.
+Do not publish absolute runner paths, prompt-log paths, raw hook output, token
+counts, secrets, or full local logs. Point humans to the local evidence folder
+instead:
+
+```text
+.agent-loops/evidence/prove-the-gate/logs/
+```
+
 ## Tiny PR Suggestion
 
 At the end of a normal Reviewer tick, count inbox items with the same `theme` and `scope`. If the count is at least the configured threshold, open one tiny PR that edits only the relevant playbook. The PR body must cite the evidence files and ask for human review.

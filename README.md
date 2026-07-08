@@ -84,7 +84,7 @@ codex --version || claude --version
 Install this skill if it is not already installed:
 
 ```sh
-git clone --branch v0.1.10 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.11 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -117,6 +117,10 @@ processes alive:
 ```sh
 .agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"
 ```
+
+AWL posts concise public GitHub comments for each state transition. Raw prompt,
+proof, review, and fixer logs stay local under
+`.agent-loops/evidence/prove-the-gate/logs/`.
 
 Bootstrap also tries to add `.agent-loops/` to the target repo's local
 `.git/info/exclude`. If the local git metadata is read-only, bootstrap warns
