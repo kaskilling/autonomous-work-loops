@@ -235,6 +235,20 @@ latest_review_verdict_for_head() {
     | tail -1
 }
 
+latest_blocker_cycle_for_head() {
+  local pr="$1" repo_slug="$2" head="$3"
+  gh pr view "$pr" --repo "$repo_slug" --json comments --jq '.comments[].body' \
+    | sed -nE "s/.*loop:(implementer|reviewer).*reviewed_sha=${head}.*verdict=(needs-fix|proof-failed).* cycle=([0-9]+) .*/\\3/p" \
+    | tail -1
+}
+
+latest_fixer_terminal_for_head() {
+  local pr="$1" repo_slug="$2" head="$3"
+  gh pr view "$pr" --repo "$repo_slug" --json comments --jq '.comments[].body' \
+    | sed -nE "s/.*loop:fixer.*reviewed_sha=${head}.*verdict=(fixed|unproven|did-not-converge|stalled).* cycle=([0-9]+) .*/\\1 \\2/p" \
+    | tail -1
+}
+
 issue_timeout_count() {
   local issue="$1" repo_slug="$2"
   gh issue view "$issue" --repo "$repo_slug" --json comments --jq '.comments[].body' \
@@ -610,7 +624,7 @@ reviewer() {
 }
 
 fixer() {
-  local repo_slug pr branch head proof_log proof_rc labels cycle prior_verdict issue log prompt base body feedback body_tail
+  local repo_slug pr branch head proof_log proof_rc labels cycle prior_terminal prior_verdict prior_cycle blocker_cycle issue log prompt base body feedback body_tail
   repo_slug="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
   while IFS=$'\t' read -r pr branch labels; do
     [ -n "$pr" ] || continue
@@ -621,12 +635,21 @@ fixer() {
     git fetch origin "$branch"
     git switch -C "$branch" "origin/$branch"
     head="$(git rev-parse HEAD)"
-    prior_verdict="$(gh pr view "$pr" --repo "$repo_slug" --json comments --jq '.comments[].body' \
-      | sed -n "s/.*loop:fixer.*reviewed_sha=${head}.*verdict=\\([^ ]*\\).*/\\1/p" \
-      | tail -1)"
-    if [ "$prior_verdict" = "fixed" ] || [ "$prior_verdict" = "unproven" ] || [ "$prior_verdict" = "did-not-converge" ] || [ "$prior_verdict" = "stalled" ]; then
-      echo "fixer no-op: PR #${pr} head ${head} already fixed with verdict=${prior_verdict}"
-      return 0
+    blocker_cycle="$(latest_blocker_cycle_for_head "$pr" "$repo_slug" "$head")"
+    blocker_cycle="${blocker_cycle:-0}"
+    prior_terminal="$(latest_fixer_terminal_for_head "$pr" "$repo_slug" "$head")"
+    if [ -n "$prior_terminal" ]; then
+      prior_verdict="${prior_terminal% *}"
+      prior_cycle="${prior_terminal##* }"
+      if [ "${prior_cycle:-0}" -ge "$blocker_cycle" ]; then
+        echo "fixer no-op: PR #${pr} head ${head} already handled blocker cycle ${blocker_cycle} with verdict=${prior_verdict} cycle=${prior_cycle}"
+        if [ "$prior_verdict" = "fixed" ]; then
+          issue="$(pr_issue_number "$pr" "$repo_slug" "$branch")"
+          set_pr_state "$pr" "$repo_slug" "$label_in_progress"
+          [ -n "$issue" ] && set_issue_state "$issue" "$repo_slug" "$label_in_progress"
+        fi
+        return 0
+      fi
     fi
     cycle="$(latest_cycle "$pr" "$repo_slug")"
     cycle="${cycle:-1}"
