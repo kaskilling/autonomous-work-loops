@@ -1,14 +1,15 @@
 # autonomous-work-loops
 
-This skill bootstraps a target GitHub repo with a local foreground loop:
+This skill bootstraps and arms a target GitHub repo with a local work loop:
 
 1. an implementer claims trusted `ready` issues and opens proven PRs
 2. a reviewer checks proof, diff, hosted checks, external inline bot comments, and acceptance criteria
 3. a fixer handles blocking review feedback when needed
 4. the loop stops at `ready-for-human` or `ready-for-human-baseline-red` for human review and merge
 
-V1 is local and GitHub-only. It is not a hosted bot, daemon, cron job, GitHub
-Action, Codex Automation, or Claude `/loop` scheduler.
+V1 is local and GitHub-only. It is not a hosted bot, cron job, GitHub Action,
+Codex Automation, or Claude `/loop` scheduler. The normal setup starts one
+managed local supervisor with status and stop controls.
 
 ## Setup
 
@@ -20,23 +21,30 @@ gh auth login
 gh auth status
 ```
 
-From the target GitHub repo:
+From the target GitHub repo, invoke the skill:
 
-```sh
-<skill-root>/assets/bootstrap.sh "$PWD"
-.agent-loops/setup-labels.sh
-.agent-loops/doctor.sh
-.agent-loops/runners/local-supervisor.sh --once "$PWD"
+```text
+/autonomous-work-loops
 ```
 
-For a guided first run:
+The agent should run the guided-and-armed setup: create labels, run doctor,
+prove the smoke issue, and start managed background watch.
+
+CLI equivalent:
 
 ```sh
-<skill-root>/assets/bootstrap.sh --guided "$PWD"
+<skill-root>/assets/bootstrap.sh --arm "$PWD"
 ```
 
-Create a small issue from `.agent-loops/FIRST-TRIAL-ISSUE.md`, then add the
-`ready` label. A clean proven path should move:
+Use these controls after setup:
+
+```sh
+.agent-loops/runners/local-supervisor.sh --status "$PWD"
+.agent-loops/runners/local-supervisor.sh --stop "$PWD"
+```
+
+Create a trusted GitHub issue, then add the `ready` label. A clean proven path
+should move:
 
 ```text
 ready -> in-progress -> ready-for-human

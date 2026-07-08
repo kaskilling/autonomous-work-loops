@@ -7,24 +7,49 @@ metadata:
 
 # Autonomous Work Loops
 
-Operate in exactly one mode per invocation. The skill is a bootstrapper plus a stateless single-tick executor; it never runs a daemon and never relies on memory from a prior tick.
+The default user experience is product setup: when invoked from a target repo without an explicit role, set up autonomous-work-loops, prove the smoke path, and arm the managed local supervisor. The user should not have to choose an internal mode, run generated setup commands, or understand `.agent-loops/` before seeing whether the repo is ready.
+
+The runtime remains host-state driven. Implementer, reviewer, and fixer ticks are stateless and reconstruct state from GitHub plus `.agent-loops/`. The managed background supervisor is only a local watch process with a PID file, log file, `--status`, and `--stop`; it is not cron, launchd, a hosted bot, Codex Automation, or Claude `/loop`.
 
 ## Mode Selection
 
-Use **Bootstrap mode** when the user asks to set up, install, initialize, bootstrap, or configure autonomous work loops in a repository. Read:
+Use **Setup and Arm mode** when the user invokes the skill from a repository, asks to set up, install, initialize, bootstrap, configure, start, or "use" autonomous work loops, and does not provide an explicit tick role. Read:
 
 1. `references/bootstrap.md`
 2. `references/adapter-github.md`
 3. `references/safety.md`
 4. `references/budgets.md`
 
-Default to the deterministic bootstrap script when possible:
+If `.agent-loops/` is absent, default to the guided-and-armed deterministic bootstrap:
+
+```sh
+<skill-root>/assets/bootstrap.sh --arm "$PWD"
+```
+
+If `.agent-loops/` already exists, do not overwrite it unless the user explicitly asks. Instead, run the generated checks and arm the managed supervisor:
+
+```sh
+.agent-loops/setup-labels.sh
+.agent-loops/doctor.sh
+.agent-loops/runners/local-supervisor.sh --preflight-runner "$PWD"
+.agent-loops/runners/local-supervisor.sh --background "$PWD"
+.agent-loops/runners/local-supervisor.sh --status "$PWD"
+```
+
+End Setup and Arm mode by telling the user:
+
+- autonomous-work-loops is armed for this repo, or exactly what blocked setup
+- the supervisor status/stop commands
+- that new work starts by creating a trusted GitHub issue and adding the `ready` label
+- that PRs appear from branches named `loop/impl/issue-N`
+
+Use plain deterministic bootstrap only when the user explicitly asks for manual setup, dry setup, no GitHub mutation, or no background supervisor:
 
 ```sh
 <skill-root>/assets/bootstrap.sh "$PWD"
 ```
 
-Use agent-rendered bootstrap only when the script is unavailable or the user explicitly wants a guided setup.
+Use agent-rendered bootstrap only when the script is unavailable.
 
 Use **Tick mode** when the user or runner gives a role: `implementer`, `reviewer`, or `fixer`. Always reconstruct state from the host and `.agent-loops/` before acting. Read:
 
@@ -42,6 +67,7 @@ Use **Tick mode** when the user or runner gives a role: `implementer`, `reviewer
 ## Hard Rules
 
 - Stay in V1 scope: no Maintainer Loop, no evidence consolidation, no Core Memory regeneration, no autonomous playbook mutation, no loopctl, no non-GitHub adapter.
+- Do not ask the user to choose `bootstrap`, `implementer`, `reviewer`, or `fixer` when they simply invoke the skill from a repo. Choose Setup and Arm mode.
 - Use the named host operations from `references/adapter-github.md`; do not invent host-specific steps in playbooks.
 - Treat proof as a precondition for autonomous convergence. If proof is absent, route to `unproven` and a human gate.
 - Reviewer may mark `ready-for-human` once proof passes, hosted checks are green or absent, and the head has no blocking defects. If hosted failures only match the default branch baseline, use `ready-for-human-baseline-red`. A clean first pass converges immediately; no fix cycle is forced when there is nothing to fix.

@@ -41,4 +41,4 @@ Autonomous convergence requires objective proof. A passing same-model review wit
 
 ## Credential Boundary
 
-The local foreground supervisor uses the user's local credentials. Bootstrap must verify `gh auth status` and record the authenticated login before starting a runner. Codex Automations, Claude `/loop`, hosted CI/bot runners, cron, and launchd are outside the V1 default. Never silently expand credential scope to make a tick pass.
+The local supervisor uses the user's local credentials. Bootstrap must verify `gh auth status` and record the authenticated login before starting a runner. Managed background mode is allowed only through the generated local supervisor; it must write a PID file, log path, and provide `--status` plus `--stop`. Codex Automations, Claude `/loop`, hosted CI/bot runners, cron, and launchd are outside the V1 default. Never silently expand credential scope to make a tick pass.

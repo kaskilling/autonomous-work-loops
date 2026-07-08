@@ -13,11 +13,11 @@ untrusted authors and prompt-injection issues, allowlisted dispatch acceptance
 passes, and the guarded runners now claim and converge on live GitHub. No-proof
 routing, ready-for-human honesty, reviewer idempotency, duplicate-claim race
 behavior, stale-claim recovery, cost-wall recovery, cycle-cap escalation,
-foreground cadence, and planted-defect review routing also pass on guarded
+local-supervisor cadence, and planted-defect review routing also pass on guarded
 fixture runs. In strict mode, executable issues must be authored by
 `trusted_actors`; external work must be rewritten as a trusted-authored dispatch
-issue. The V1 product path is now one visible local foreground supervisor. Codex
-Automations and Claude `/loop` are removed from V1 setup.
+issue. The V1 product path is now one managed local supervisor with status and
+stop controls. Codex Automations and Claude `/loop` are removed from V1 setup.
 
 Release-candidate proof from 2026-07-06:
 
@@ -42,8 +42,8 @@ Before broad public release, repeat the release-candidate smoke with at least
 one external user and a pinned tag:
 
 1. Create a small repo with a real test command and 1-2 `ready` issues.
-2. Bootstrap: `/autonomous-work-loops`.
-3. Start the tested V1 runner surface: `.agent-loops/runners/local-supervisor.sh --once "$PWD"`.
+2. Bootstrap and arm: `/autonomous-work-loops`.
+3. Confirm the tested V1 runner surface: `.agent-loops/runners/local-supervisor.sh --status "$PWD"`.
 4. Confirm: one `ready` issue -> claimed -> proven PR -> `ready-for-human`. A
    clean proven PR may converge on the first review; review->fix cycles happen
    only when defects are found.
@@ -114,7 +114,7 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 
 ## Versioning
 
-- `plugin.json` is at `0.1.4`. Bump to `1.0.0` only after the acceptance test passes on >=2 real repos.
+- `plugin.json` is at `0.1.5`. Bump to `1.0.0` only after the acceptance test passes on >=2 real repos.
 - Marketplace entries should pin a `sha`, not a moving `ref`, given the autonomy/credential surface — users should opt into updates deliberately.
 
 ## Marketing: lead with the differentiator, not the novelty
@@ -123,7 +123,7 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 
 1. **Reviewed, not just retried.** Adversarial, proof-anchored review that converges on a clean proven pass and enters review→fix cycles only for real defects (most "autonomous PR" demos hand you unreviewed first-draft code). One-liner: *"It doesn't just write the PR — it reviews and hardens it until it converges."*
 2. **Designed for guarded autonomy, not yet proven release-ready.** Trust-gated intake + proof-as-precondition + human gates + cost walls are the intended safety story. Strict trust and the guarded Codex runner now pass, but the wider matrix remains open. One-liner after the gate: *"It exposes the whole state machine in your issue labels and proves gates before claiming safety."*
-3. **Portable and honest.** Works across Claude/Codex/any agent; state lives on the host so it's resumable and auditable; no hidden daemon. One-liner: *"No black box — the whole state machine is visible in your issue labels."*
+3. **Portable and honest.** Works across Claude/Codex/any agent; state lives on the host so it's resumable and auditable; no hidden hosted service or unmanaged daemon. One-liner: *"No black box — the whole state machine is visible in your issue labels."*
 
 ### Channels
 - **Show, don't tell**: the label-board GIF + the convergence demo. Post to the relevant agent-tooling communities and the comments of the source video (credit Neat Code).

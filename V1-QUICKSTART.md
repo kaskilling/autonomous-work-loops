@@ -1,20 +1,19 @@
 # V1 Quickstart
 
-V1 runs one local foreground supervisor. It claims trusted GitHub issues labeled
-`ready`, opens proven PRs, reviews them, classifies hosted checks and external
-inline bot feedback, fixes blockers when needed, and stops at `ready-for-human`
-or `ready-for-human-baseline-red` for your final review.
+V1 runs one local supervisor. It claims trusted GitHub issues labeled `ready`,
+opens proven PRs, reviews them, classifies hosted checks and external inline bot
+feedback, fixes blockers when needed, and stops at `ready-for-human` or
+`ready-for-human-baseline-red` for your final review.
 
 ## The Short Path
 
 1. Install prerequisites.
 2. Install the skill.
-3. Bootstrap one target GitHub repo.
-4. Create labels.
-5. Run the doctor check.
-6. Create one tiny trusted issue and add `ready`.
-7. Run one supervisor tick.
-8. Review the resulting PR when it reaches `ready-for-human` or
+3. From the target repo, invoke `/autonomous-work-loops`.
+4. Let the setup agent create labels, run doctor, prove the smoke issue, and arm
+   the managed background supervisor.
+5. Create trusted GitHub issues and add `ready`.
+6. Review the resulting PR when it reaches `ready-for-human` or
    `ready-for-human-baseline-red`.
 
 ## 1. Install Prerequisites
@@ -58,33 +57,39 @@ Go to the GitHub repo where agents should work:
 cd /path/to/target-repo
 ```
 
-Run deterministic bootstrap:
-
-```sh
-/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
-```
-
-Or run the guided first setup, which creates labels, runs doctor, creates the
-smoke issue, and runs one one-shot supervisor tick:
-
-```sh
-/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh --guided "$PWD"
-```
-
-Or invoke the skill in Codex or Claude for agent-guided setup:
+Preferred path: invoke the skill in Codex or Claude and let the agent set up and
+arm the repo:
 
 ```text
 /autonomous-work-loops
 ```
 
-or:
+CLI equivalent:
 
-```text
-Set up autonomous work loops here.
+```sh
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh --arm "$PWD"
 ```
 
-Both paths write `.agent-loops/` and a Bootstrap Report. Read the report before
-starting the supervisor. The script refuses to overwrite an existing
+`--arm` creates or updates labels, runs doctor, preflights the role runner,
+creates the smoke issue, runs one one-shot supervisor tick, then starts managed
+background watch.
+
+Use guided setup without background watch when you want setup to stop after the
+smoke tick:
+
+```sh
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh --guided "$PWD"
+```
+
+Use deterministic manual bootstrap when you do not want GitHub labels, issues,
+or supervisor ticks created for you:
+
+```sh
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
+```
+
+All paths write `.agent-loops/` and a Bootstrap Report. Read the report before
+changing defaults. The script refuses to overwrite an existing
 `.agent-loops/` unless you pass `--force`, and it refuses non-GitHub or non-git
 targets unless you pass `--allow-incomplete` for manual scaffolding.
 
@@ -103,9 +108,10 @@ Confirm these fields in `.agent-loops/config.yaml`:
 - `trust_posture`: use `strict` for public or multi-contributor repos.
 - `labels`: keep defaults unless the repo already has a deliberate label scheme.
 
-## 4. Create Labels
+## 4. Labels
 
-Run the generated helper:
+`--arm` and `--guided` run the generated label helper for you. For manual setup,
+run:
 
 ```sh
 .agent-loops/setup-labels.sh
@@ -124,9 +130,10 @@ The helper is idempotent. It creates or updates:
 | `did-not-converge` | Review/fix cycle cap was reached |
 | `stalled` | Runtime wall, retry wall, or local harness/setup blocker was reached |
 
-## 5. Run Doctor
+## 5. Doctor
 
-Run the non-mutating preflight:
+`--arm` and `--guided` run the non-mutating preflight for you. For manual setup,
+run:
 
 ```sh
 .agent-loops/doctor.sh
@@ -139,9 +146,10 @@ safe for a trial, but the `timeout`/`gtimeout` warning is worth fixing on macOS:
 brew install coreutils
 ```
 
-## 6. Run The First Trial
+## 6. First Trial
 
-Use the generated issue body:
+`--arm` and `--guided` create the first trial issue for you. For manual setup,
+use the generated issue body:
 
 ```sh
 cat .agent-loops/FIRST-TRIAL-ISSUE.md
@@ -149,9 +157,16 @@ cat .agent-loops/FIRST-TRIAL-ISSUE.md
 
 Create a GitHub issue from that template as a trusted actor, then apply `ready`.
 
-## 7. Run One Supervisor Tick
+## 7. Supervisor Controls
 
-Run this in one visible terminal:
+`--arm` starts managed background watch after the smoke tick passes. Use:
+
+```sh
+.agent-loops/runners/local-supervisor.sh --status "$PWD"
+.agent-loops/runners/local-supervisor.sh --stop "$PWD"
+```
+
+To run one visible tick:
 
 ```sh
 .agent-loops/runners/local-supervisor.sh --once "$PWD"
@@ -171,11 +186,17 @@ Claude runner. To force Claude directly:
 AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local-supervisor.sh --once "$PWD"
 ```
 
-It exits after one pass by default. Use explicit watch mode only after the smoke
-test is proven:
+It exits after one pass by default. Use explicit foreground watch mode only
+after the smoke test is proven:
 
 ```sh
 .agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"
+```
+
+Start managed background watch manually with:
+
+```sh
+.agent-loops/runners/local-supervisor.sh --background "$PWD"
 ```
 
 Override the interval only when you are deliberately testing cadence:

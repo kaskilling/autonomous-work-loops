@@ -29,7 +29,7 @@ budgets:
 
 ## Runner-Enforced Limits
 
-Runtime and cost can be exceeded while the agent is busy, so the foreground supervisor must invoke guarded role runners that wrap every tick in the strongest external wall available: `timeout`, `gtimeout`, or the shell fallback. Codex Automations, Claude `/loop`, cron, launchd, and GitHub Actions schedules are outside V1.
+Runtime and cost can be exceeded while the agent is busy, so the local supervisor must invoke guarded role runners that wrap every tick in the strongest external wall available: `timeout`, `gtimeout`, or the shell fallback. Managed background mode uses the same supervisor loop and must remain stoppable with `--stop`. Codex Automations, Claude `/loop`, cron, launchd, and GitHub Actions schedules are outside V1.
 
 ## Killed Ticks
 

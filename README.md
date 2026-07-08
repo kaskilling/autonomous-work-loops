@@ -3,10 +3,10 @@
 Turn trusted GitHub issues into proven, reviewed PRs.
 
 **Status:** ready for private development and targeted validation installs.
-The 2026-07-06 release-candidate pass proved a fresh public clone, standard
-skill installer paths, Codex and Claude plugin installs from clean temp homes,
-and a live foreground-supervisor smoke. Keep broad public launch and unattended
-use behind real user trials and pinned release tags.
+The 2026-07-08 setup pass proved the smooth path: skill/default setup can render
+`.agent-loops/`, run guided checks, and arm a managed local supervisor with
+status and stop controls. Keep broad public launch behind real user trials and
+pinned release tags.
 
 You write a clear issue and add the `ready` label. A local supervisor runs three
 agent roles:
@@ -20,12 +20,49 @@ findings, the PR is labeled `ready-for-human`. If hosted checks are red only
 because the default branch is already red, the PR is labeled
 `ready-for-human-baseline-red` instead. You still review and merge it yourself.
 
-V1 is local and GitHub-only. It is not a hosted bot, daemon, cron job, GitHub
-Action, Codex Automation, or Claude `/loop` scheduler.
+V1 is local and GitHub-only. It is not a hosted bot, cron job, GitHub Action,
+Codex Automation, or Claude `/loop` scheduler. The normal setup starts one
+managed local background supervisor that you can inspect and stop.
 
-## Five-Minute Setup
+## First Run
 
-Install machine prerequisites:
+From the repo where agents should work, invoke the skill in Codex or Claude:
+
+```text
+/autonomous-work-loops
+```
+
+The agent should set up `.agent-loops/`, create or update labels, run doctor,
+prove one smoke issue, and arm the managed local supervisor. When it finishes,
+create normal GitHub issues for work you want done and add the `ready` label.
+
+What success looks like:
+
+```text
+issue with ready -> loop/impl/issue-N branch -> PR -> ready-for-human
+```
+
+If hosted checks fail only because the default branch is already red, the final
+handoff label is `ready-for-human-baseline-red`.
+
+Use these generated controls when needed:
+
+```sh
+.agent-loops/runners/local-supervisor.sh --status "$PWD"
+.agent-loops/runners/local-supervisor.sh --stop "$PWD"
+```
+
+## Before You Start
+
+The setup agent checks these, but they are the real requirements:
+
+- The target is a GitHub repo with issues and pull requests enabled.
+- `gh auth status` works for a GitHub user allowed to create issues, labels,
+  branches, and PRs.
+- The repo has at least one proof command such as test, build, or lint.
+- Codex CLI or Claude Code can run locally.
+
+On macOS, install machine prerequisites:
 
 ```sh
 brew install gh coreutils
@@ -33,7 +70,7 @@ gh auth login
 gh auth status
 ```
 
-Install this skill:
+Install this skill if it is not already installed:
 
 ```sh
 git clone https://github.com/kaskilling/autonomous-work-loops.git
@@ -44,52 +81,46 @@ cd autonomous-work-loops
 Existing installs are moved aside to a timestamped backup by default. Use
 `--force` only when you intentionally want to replace without a backup.
 
-Bootstrap the GitHub repo you want agents to work on:
+## Command-Line Setup
+
+Use this when you want the same smooth path without an agent harness:
 
 ```sh
 cd /path/to/target-repo
-/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh --arm "$PWD"
 ```
 
-For the easiest first run in a fresh target repo, use guided bootstrap. It
-creates or updates labels, runs doctor, creates the smoke issue, and runs one
-supervisor tick:
+`--arm` creates or updates labels, runs doctor, preflights the role runner,
+creates the first smoke issue, runs one supervisor tick, then starts managed
+background watch.
+
+For setup without background watch:
 
 ```sh
 /path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh --guided "$PWD"
 ```
 
+For manual setup without GitHub label mutation or a supervisor tick:
+
+```sh
+/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
+```
+
 If `.agent-loops/` already exists and you intentionally want to replace it, add
 `--force`.
 
-If you prefer agent-guided setup, ask Codex or Claude from the target repo:
-
-```text
-/autonomous-work-loops
-```
-
-or:
-
-```text
-Set up autonomous work loops here.
-```
-
-Then run the generated setup checks:
+Manual setup requires the generated commands:
 
 ```sh
 .agent-loops/setup-labels.sh
 .agent-loops/doctor.sh
+.agent-loops/runners/local-supervisor.sh --once "$PWD"
+.agent-loops/runners/local-supervisor.sh --background "$PWD"
 ```
 
 Bootstrap also tries to add `.agent-loops/` to the target repo's local
 `.git/info/exclude`. If the local git metadata is read-only, bootstrap warns
 and continues; generated runners still refuse to stage `.agent-loops/` files.
-
-Run one local supervisor tick:
-
-```sh
-.agent-loops/runners/local-supervisor.sh --once "$PWD"
-```
 
 The supervisor preflights the Codex role runner before using it. If Codex cannot
 start in the current environment and Claude Code is available, it falls back to
@@ -107,6 +138,15 @@ Or watch continuously after the smoke test is proven:
 
 If no trusted ready issue exists, the supervisor prints the exact smoke-issue
 command to run from `.agent-loops/FIRST-TRIAL-ISSUE.md`.
+
+## Glossary
+
+- `proof`: the configured test, build, or lint command that must pass before
+  autonomous handoff.
+- `trusted actor`: a GitHub user allowed to create executable `ready` issues.
+- `supervisor`: the local process that runs implementer, reviewer, and fixer
+  ticks.
+- `ready`: the label that gives AWL permission to work on an issue.
 
 ## What You Need To Decide
 
@@ -210,15 +250,16 @@ For publishing notes, see [PUBLISHING.md](PUBLISHING.md).
 ## Current Status
 
 V1 is implemented and tested on live private GitHub repos. The current happy
-path is the local foreground supervisor:
+path is the managed local supervisor:
 
 ```sh
-.agent-loops/runners/local-supervisor.sh --once "$PWD"
+.agent-loops/runners/local-supervisor.sh --background "$PWD"
 ```
 
-The latest release-candidate smoke used a fresh public clone, clean agent homes,
-and the generated Claude role runner to move issue #1 to PR #2 with
-`ready-for-human` in `kaskilling/awl-live-smoke-20260706`.
+The latest release-candidate smokes used fresh clones, clean agent homes, and
+generated role runners to move trusted `ready` issues into proven PRs. The
+managed supervisor now exposes `--status` and `--stop` so a setup agent can arm
+the repo without leaving the user to run a watch command manually.
 
 Known constraints: browser or Playwright proof can fail under locked local Codex
 sandboxes. On this machine, the nested Codex role runner also hit a local Codex

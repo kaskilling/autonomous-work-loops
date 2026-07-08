@@ -41,7 +41,7 @@ gh repo create kaskilling/autonomous-work-loops --public --source=. --remote=ori
 
 Tag targeted-validation builds so installs can pin them:
 ```sh
-git tag v0.1.4 && git push origin v0.1.4
+git tag v0.1.5 && git push origin v0.1.5
 ```
 
 ---
@@ -102,7 +102,7 @@ file to this one):
   "plugins": [
     {
       "name": "autonomous-work-loops",
-      "source": { "source": "git", "url": "https://github.com/<you>/autonomous-work-loops.git", "ref": "v0.1.4" },
+      "source": { "source": "git", "url": "https://github.com/<you>/autonomous-work-loops.git", "ref": "v0.1.5" },
       "category": "automation"
     }
   ]
@@ -115,7 +115,7 @@ Users then run:
 /plugin install autonomous-work-loops
 ```
 
-Pin `ref` to the **tag** (`v0.1.4`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
+Pin `ref` to the **tag** (`v0.1.5`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
 
 ### Channel E — Public discovery (the launch post)
 

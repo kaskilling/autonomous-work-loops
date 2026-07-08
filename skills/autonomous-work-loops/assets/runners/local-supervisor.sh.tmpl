@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local foreground supervisor for autonomous-work-loops.
+# Local supervisor for autonomous-work-loops.
 # Runs one visible tick by default. Pass --watch to keep polling in this
 # terminal. It is not a daemon and it does not install cron, launchd, or other
 # persistent scheduler entries.
@@ -7,7 +7,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: local-supervisor.sh [--once] [--watch] [--interval seconds] [repo]
+Usage: local-supervisor.sh [--once] [--watch] [--background] [--status] [--stop] [--interval seconds] [repo]
 
 Defaults:
   --once       run implementer, reviewer, and fixer once, then exit
@@ -15,6 +15,9 @@ Defaults:
 
 Options:
   --watch      keep polling after each tick
+  --background start watch mode in the background and write PID/log files
+  --status     show managed background supervisor status, then exit
+  --stop       stop the managed background supervisor, then exit
   --interval   polling interval for --watch; default 600
   --preflight-runner
                select and validate the guarded role runner, then exit
@@ -23,6 +26,7 @@ EOF
 }
 
 mode=once
+action=run
 preflight_runner=0
 interval_seconds="${AWL_SUPERVISOR_INTERVAL_SECONDS:-}"
 [ -n "$interval_seconds" ] || interval_seconds="{{interval_seconds}}"
@@ -37,6 +41,19 @@ while [ "$#" -gt 0 ]; do
       ;;
     --watch)
       mode=watch
+      shift
+      ;;
+    --background)
+      mode=watch
+      action=background
+      shift
+      ;;
+    --status)
+      action=status
+      shift
+      ;;
+    --stop)
+      action=stop
       shift
       ;;
     --preflight-runner)
@@ -69,6 +86,87 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$repo" ] || repo="{{repo_path}}"
+
+script_path="$0"
+case "$script_path" in
+  /*) ;;
+  *) script_path="$(CDPATH= cd -- "$(dirname -- "$script_path")" && pwd -P)/$(basename -- "$script_path")" ;;
+esac
+
+state_dir="${repo}/.agent-loops"
+logs_dir="${state_dir}/evidence/prove-the-gate/logs"
+pid_file="${state_dir}/supervisor.pid"
+
+read_pid() {
+  [ -f "$pid_file" ] || return 1
+  pid="$(cat "$pid_file" 2>/dev/null || true)"
+  case "$pid" in
+    ''|*[!0-9]*) return 1 ;;
+    *) printf '%s\n' "$pid" ;;
+  esac
+}
+
+pid_is_running() {
+  local pid="$1"
+  [ -n "$pid" ] && kill -0 "$pid" >/dev/null 2>&1
+}
+
+managed_status() {
+  local pid
+  pid="$(read_pid || true)"
+  if [ -n "$pid" ] && pid_is_running "$pid"; then
+    echo "managed supervisor running: pid=${pid}"
+    echo "pid file: ${pid_file}"
+    echo "logs: ${logs_dir}"
+    return 0
+  fi
+  if [ -n "$pid" ]; then
+    echo "managed supervisor not running; stale pid=${pid}"
+    echo "pid file: ${pid_file}"
+    return 1
+  fi
+  echo "managed supervisor not running"
+  echo "pid file: ${pid_file}"
+  return 1
+}
+
+managed_stop() {
+  local pid
+  pid="$(read_pid || true)"
+  if [ -z "$pid" ]; then
+    echo "managed supervisor is not running"
+    rm -f "$pid_file"
+    return 0
+  fi
+  if ! pid_is_running "$pid"; then
+    echo "managed supervisor is not running; clearing stale pid=${pid}"
+    rm -f "$pid_file"
+    return 0
+  fi
+  echo "stopping managed supervisor pid=${pid}"
+  kill "$pid" >/dev/null 2>&1 || true
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if ! pid_is_running "$pid"; then
+      rm -f "$pid_file"
+      echo "managed supervisor stopped"
+      return 0
+    fi
+    sleep 1
+  done
+  echo "managed supervisor did not stop after SIGTERM; pid=${pid}" >&2
+  return 1
+}
+
+case "$action" in
+  status)
+    managed_status
+    exit $?
+    ;;
+  stop)
+    managed_stop
+    exit $?
+    ;;
+esac
 
 run_with_timeout() {
   if command -v timeout >/dev/null 2>&1; then timeout "$@"; return; fi
@@ -143,6 +241,41 @@ if [ "$preflight_runner" = 1 ]; then
   fi
   echo "[$(date -u +"%Y-%m-%dT%H:%M:%SZ")] role runner preflight passed: $runner"
   exit 0
+fi
+
+start_background() {
+  local pid log
+  mkdir -p "$logs_dir"
+  pid="$(read_pid || true)"
+  if [ -n "$pid" ] && pid_is_running "$pid"; then
+    echo "managed supervisor already running: pid=${pid}"
+    echo "pid file: ${pid_file}"
+    echo "logs: ${logs_dir}"
+    return 0
+  fi
+  [ -n "$pid" ] && rm -f "$pid_file"
+  log="${logs_dir}/local-supervisor-watch-$(date -u +%Y%m%d-%H%M%S).log"
+  (
+    cd "$repo"
+    nohup env AWL_ROLE_RUNNER="$runner" AWL_PREFLIGHT_ROLE_RUNNER=0 "$script_path" --watch --interval "$interval_seconds" "$repo" >>"$log" 2>&1 &
+    child=$!
+    printf '%s\n' "$child" >"$pid_file"
+  )
+  pid="$(read_pid || true)"
+  if [ -n "$pid" ] && pid_is_running "$pid"; then
+    echo "managed supervisor started: pid=${pid}"
+    echo "log: ${log}"
+    echo "status: ${script_path} --status \"${repo}\""
+    echo "stop: ${script_path} --stop \"${repo}\""
+    return 0
+  fi
+  echo "managed supervisor failed to start; inspect ${log}" >&2
+  return 1
+}
+
+if [ "$action" = "background" ]; then
+  start_background
+  exit $?
 fi
 
 run_tick() {
