@@ -20,7 +20,11 @@ Install machine prerequisites:
 ```sh
 brew install gh coreutils
 gh auth login
+git --version
 gh auth status
+python3 --version
+gtimeout --version || timeout --version
+codex --version || claude --version
 ```
 
 From the target GitHub repo, invoke the skill:
@@ -28,6 +32,10 @@ From the target GitHub repo, invoke the skill:
 ```text
 /autonomous-work-loops
 ```
+
+Codex plugin or namespaced skill UI installs may show
+`autonomous-work-loops:autonomous-work-loops` in the skill picker. Claude Code
+plugin installs use `/autonomous-work-loops:autonomous-work-loops`.
 
 The agent should run the guided-and-armed setup: create labels, run doctor,
 prove the smoke issue, and start managed background watch. If `.agent-loops/`

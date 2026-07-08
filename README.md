@@ -28,6 +28,14 @@ From the repo where agents should work, invoke the skill in Codex or Claude:
 /autonomous-work-loops
 ```
 
+Depending on how the skill is installed, your host may show a namespaced command:
+
+| Install path | Invocation |
+|---|---|
+| Direct skill install | `/autonomous-work-loops` |
+| Codex plugin or namespaced skill UI | shown as `autonomous-work-loops:autonomous-work-loops` in the skill picker |
+| Claude Code plugin | `/autonomous-work-loops:autonomous-work-loops` |
+
 The agent should set up `.agent-loops/`, create or update labels, run doctor,
 prove one smoke issue, and arm the managed local supervisor. When it finishes,
 create normal GitHub issues for work you want done and add the `ready` label.
@@ -57,31 +65,39 @@ The setup agent checks these, but they are the real requirements:
 - The target is a GitHub repo with issues and pull requests enabled.
 - `gh auth status` works for a GitHub user allowed to create issues, labels,
   branches, and PRs.
+- `python3` is available.
 - The repo has at least one proof command such as test, build, or lint.
 - Codex CLI or Claude Code can run locally.
 
-On macOS, install machine prerequisites:
+On macOS, install machine prerequisites and verify the tools:
 
 ```sh
 brew install gh coreutils
 gh auth login
+git --version
 gh auth status
+python3 --version
+gtimeout --version || timeout --version
+codex --version || claude --version
 ```
 
 Install this skill if it is not already installed:
 
 ```sh
-git clone https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.9 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
-./skills/autonomous-work-loops/assets/install.sh --symlink
+./skills/autonomous-work-loops/assets/install.sh
 ```
 
-Existing installs are moved aside to a timestamped backup by default. Use
-`--force` only when you intentionally want to replace without a backup.
+That installs a fixed local copy. Use `--symlink` only while developing this
+skill from a checkout you control. Existing installs are moved aside to a
+timestamped backup by default; use `--force` only when you intentionally want
+to replace without a backup.
 
 ## Command-Line Setup
 
-Use this when you want the same smooth path without an agent harness:
+The normal path is the skill invocation above. Use the CLI only when you want
+the same setup without an agent harness:
 
 ```sh
 cd /path/to/target-repo
@@ -92,31 +108,8 @@ cd /path/to/target-repo
 creates the first smoke issue, runs one supervisor tick, then starts managed
 background watch. If `.agent-loops/` already exists, `--arm` resumes the
 existing setup, avoids creating a duplicate smoke issue, and arms the
-supervisor.
-
-For setup without background watch:
-
-```sh
-/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh --guided "$PWD"
-```
-
-For manual setup without GitHub label mutation or a supervisor tick:
-
-```sh
-/path/to/autonomous-work-loops/skills/autonomous-work-loops/assets/bootstrap.sh "$PWD"
-```
-
-If `.agent-loops/` already exists and you intentionally want to replace it
-rather than resume it, add `--force`.
-
-Manual setup requires the generated commands:
-
-```sh
-.agent-loops/setup-labels.sh
-.agent-loops/doctor.sh
-.agent-loops/runners/local-supervisor.sh --once "$PWD"
-.agent-loops/runners/local-supervisor.sh --background "$PWD"
-```
+supervisor. Use [V1-QUICKSTART.md](V1-QUICKSTART.md) for guided, manual,
+debug, and runner override commands.
 
 Use foreground watch when your agent harness cannot keep background child
 processes alive:

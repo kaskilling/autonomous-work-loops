@@ -27,7 +27,11 @@ On macOS:
 ```sh
 brew install gh coreutils
 gh auth login
+git --version
 gh auth status
+python3 --version
+gtimeout --version || timeout --version
+codex --version || claude --version
 ```
 
 `gh` is required. `coreutils` provides `gtimeout`, which gives the local runner a
@@ -39,15 +43,15 @@ guarded role runner.
 ## 2. Install The Skill
 
 ```sh
-git clone https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.9 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
-./skills/autonomous-work-loops/assets/install.sh --symlink
+./skills/autonomous-work-loops/assets/install.sh
 ```
 
-Use `--symlink` while developing or evaluating the skill. Use the default copy
-mode when you want a fixed local copy. Existing installs are moved aside to a
-timestamped backup by default; use `--force` only when you intentionally want to
-replace without a backup.
+This installs a fixed local copy from a tagged release. Use `--symlink` only
+while developing this skill from a checkout you control. Existing installs are
+moved aside to a timestamped backup by default; use `--force` only when you
+intentionally want to replace without a backup.
 
 ## 3. Bootstrap The Target Repo
 
@@ -63,6 +67,14 @@ arm the repo:
 ```text
 /autonomous-work-loops
 ```
+
+Depending on install path, your host may show:
+
+| Install path | Invocation |
+|---|---|
+| Direct skill install | `/autonomous-work-loops` |
+| Codex plugin or namespaced skill UI | shown as `autonomous-work-loops:autonomous-work-loops` in the skill picker |
+| Claude Code plugin | `/autonomous-work-loops:autonomous-work-loops` |
 
 CLI equivalent:
 

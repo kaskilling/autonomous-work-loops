@@ -69,11 +69,14 @@ non-sandboxed surface.
 ### 1. Cross-tool (Claude + Codex + .agents) — plain git repo
 This repo is already shaped for it, and the clean temp-home proof passed. Users:
 ```sh
-git clone <your-repo-url> autonomous-work-loops
+git clone --branch v0.1.9 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
-./skills/autonomous-work-loops/assets/install.sh --symlink
+./skills/autonomous-work-loops/assets/install.sh
 ```
-`install.sh` drops it into `~/.claude/skills`, `~/.codex/skills`, and `~/.agents/skills`. This is the most auditable path — the security-conscious audience can read every line before trusting it with credentials. Lead with this for targeted validation.
+`install.sh` drops a fixed copy into `~/.claude/skills`, `~/.codex/skills`,
+and `~/.agents/skills`. Use `--symlink` only for development checkouts. This is
+the most auditable path: security-conscious users can read every line before
+trusting it with credentials. Lead with this for targeted validation.
 
 ### 2. Standard skill installer — public SKILL.md distribution
 The nested skill folder resolved successfully in clean install proof. The
@@ -117,7 +120,9 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 
 ## Versioning
 
-- `plugin.json` is at `0.1.8`. Bump to `1.0.0` only after the acceptance test passes on >=2 real repos.
+- `plugin.json` is at `0.1.9`. Because historical checkpoint tag `v1.0.0`
+  already exists, publish the first installable v1 release as `v1.0.1` or
+  another non-conflicting tag after the acceptance test passes on >=2 real repos.
 - Marketplace entries should pin a `sha`, not a moving `ref`, given the autonomy/credential surface — users should opt into updates deliberately.
 
 ## Marketing: lead with the differentiator, not the novelty

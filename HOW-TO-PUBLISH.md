@@ -4,29 +4,11 @@ This is the practical checklist. For the *why* behind channel choices, see `PUBL
 
 ---
 
-## Are we ready to publish? — honest answer
+## Publishing Gate
 
-**Ready for: private development and targeted validation installs.**
-**Not ready for: broad public launch or unattended public use without external user trials and pinned release tags.**
-
-| Check | State |
-|---|---|
-| Core skill implemented + internally consistent | ✅ done |
-| Safety-critical trust gate enforced in the privileged op | ✅ T2/T3/T4 author-only retest passed (`build/GATE-RESULTS.md`) |
-| Docs match shipped behavior (no phantom flags, no stale cycle claims) | ✅ swept |
-| Baseline live run passed (GitHub + Codex + pytest) | ✅ once |
-| Guarded-runner matrix (strict-trust, no-proof, failed-proof, runner cadence, dup-claim, stale-claim) | ✅ strong targeted-validation signal in `build/GATE-RESULTS.md` |
-| Browser-compatible proof | Not part of the V1 promise unless a compatible non-sandboxed surface is validated |
-| Fresh-install release-candidate smoke | ✅ passed on `kaskilling/awl-live-smoke-20260706` |
-| Hosted check routing | ✅ green, PR-only red, and baseline-red live validations passed |
-| Standard skill installer install | ✅ nested `skills/autonomous-work-loops` resolution passed |
-| Codex plugin install | ✅ clean temp-home local-marketplace install passed |
-| Claude plugin install | ✅ clean temp-home local-marketplace install passed |
-| Root license | ✅ MIT `LICENSE` present and detected by GitHub |
-
-**Recommendation:** keep this in targeted validation until at least one external
-user repeats the fresh-install smoke from a pinned tag. The previous soft-launch
-recommendation is superseded by `build/GATE-RESULTS.md`.
+Before publishing a new channel or announcing a broader release, check
+`PUBLISHING.md` for the release posture and `build/GATE-RESULTS.md` for the
+current proof record. This file is only the mechanical checklist.
 
 ---
 
@@ -37,12 +19,11 @@ The product repo is published at `https://github.com/kaskilling/autonomous-work-
 ```sh
 cd <local checkout>/autonomous-work-loops
 gh repo create kaskilling/autonomous-work-loops --public --source=. --remote=origin --push
-# (use --private first if you want a closed soft-launch)
 ```
 
 Tag targeted-validation builds so installs can pin them:
 ```sh
-git tag v0.1.8 && git push origin v0.1.8
+git tag v0.1.9 && git push origin v0.1.9
 ```
 
 ---
@@ -55,11 +36,13 @@ Anyone clones and runs the installer. Works for all three tools.
 
 Tell users:
 ```sh
-git clone https://github.com/<you>/autonomous-work-loops
+git clone --branch v0.1.9 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
-./skills/autonomous-work-loops/assets/install.sh --symlink   # or omit --symlink to copy
+./skills/autonomous-work-loops/assets/install.sh
 ```
-That drops the skill into `~/.claude/skills`, `~/.codex/skills`, `~/.agents/skills`. Done — they invoke `/autonomous-work-loops` in any repo.
+That drops a fixed copy of the skill into `~/.claude/skills`, `~/.codex/skills`,
+and `~/.agents/skills`. Done — they invoke `/autonomous-work-loops` in any repo.
+Use `--symlink` only for development checkouts.
 
 **Best for:** the security-conscious audience (they read the code before trusting it with credentials). This is the recommended lead channel for targeted validation.
 
@@ -99,24 +82,21 @@ file to this one):
 ```json
 {
   "name": "your-marketplace",
-  "owner": { "name": "<you>" },
+  "owner": { "name": "kaskilling" },
   "plugins": [
     {
       "name": "autonomous-work-loops",
-      "source": { "source": "git", "url": "https://github.com/<you>/autonomous-work-loops.git", "ref": "v0.1.8" },
+      "source": { "source": "git", "url": "https://github.com/kaskilling/autonomous-work-loops.git", "ref": "v0.1.9" },
       "category": "automation"
     }
   ]
 }
 ```
 
-Users then run:
-```
-/plugin marketplace add https://github.com/<you>/autonomous-work-loops
-/plugin install autonomous-work-loops
-```
+After that marketplace repository exists, users add its actual GitHub URL with
+`/plugin marketplace add ...`, then run `/plugin install autonomous-work-loops`.
 
-Pin `ref` to the **tag** (`v0.1.8`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
+Pin `ref` to the **tag** (`v0.1.9`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
 
 ### Channel E — Public discovery (the launch post)
 
