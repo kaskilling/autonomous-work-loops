@@ -4,12 +4,13 @@ Use Git tags and GitHub releases for frozen states instead of committing copied 
 
 Installable release train:
 
+- `v0.1.13` - Public-readiness cleanup: sanitized repo-facing validation docs, removed private fixture names/local paths from public files, changed plugin publisher metadata to `kaskilling`, and stopped generated GitHub failure comments from including absolute target paths.
 - `v0.1.12` - Adaptive validation guidance now tells roles to run repo-derived focused checks for touched behavior, and successful first-run smoke artifacts are cleaned up after setup proof.
 - `v0.1.11` - Public GitHub comments now use concise structured summaries, sanitize log excerpts, and keep runner-local prompt/proof/review/fixer paths out of PR and issue timelines.
 - `v0.1.10` - Supervisor status now includes foreground/watch activity plus a current-work snapshot with issue, PR, phase, role, verdict, hosted checks, and next action.
 - `v0.1.9` - Documentation cleanup: pinned copy install by default, explicit plugin invocation notes, current prerequisites, and clearer release-marker guidance.
 - `v0.1.8` - Idempotent setup-and-arm reruns: existing `.agent-loops/` resumes without duplicate smoke issues; background durability docs now call out the persistent-terminal requirement.
-- `v0.1.7` - Live setup-and-arm release gate: external-review fixer cycle fix, `tts-compare` PR #2 reached `ready-for-human`, managed background status/stop verified in a persistent terminal.
+- `v0.1.7` - Live setup-and-arm release gate: external-review fixer cycle fix, convergence to `ready-for-human`, and managed background status/stop verified in a persistent terminal.
 - `v0.1.6` - Setup-and-arm second-opinion hardening: supervisor status file, guided smoke failure cleanup, and recovery-focused bootstrap report.
 
 Historical checkpoint tags:

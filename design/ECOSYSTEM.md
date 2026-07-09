@@ -26,19 +26,20 @@ The official `claude-plugins-official` marketplace already ships **`ralph-loop`*
 | Safety | none specific | trust-gated intake, proof precondition, human gates, budget walls |
 | Multi-machine | no | claim atomicity via branch-ref push (ADR-0008) |
 
-Positioning: *"ralph-loop makes one agent retry. autonomous-work-loops runs a reviewed, converging, multi-agent PR factory you can leave unattended."*
+Positioning: *"ralph-loop makes one agent retry. autonomous-work-loops runs a reviewed, converging PR workflow with visible state and human merge gates."*
 
-## 3. Where the skill physically lives (three consumers, separate copies)
+## 3. Where the skill physically lives
 
-This machine has three skill directories, and the convention is **`~/.agents/skills/` is canonical; `~/.claude/skills/` and `~/.codex/skills/` symlink into it** (per-skill symlinks):
+The same skill folder can be installed into common agent skill locations:
 
-- `~/.agents/skills/<skill>` — the real directory (source of truth)
-- `~/.claude/skills/<skill>` → `~/.agents/skills/<skill>` (Claude Code)
-- `~/.codex/skills/<skill>` → `~/.agents/skills/<skill>` (Codex CLI)
+- `~/.agents/skills/<skill>`
+- `~/.claude/skills/<skill>`
+- `~/.codex/skills/<skill>`
 
-(For repos that own a skill, the canonical entry may instead symlink to the repo, e.g. `autonomous-work-loops` -> its repo's `skills/autonomous-work-loops/` dir, and `maestro-android-cli` -> a project repo.)
-
-Implication: install by placing the real skill once (in its repo or `.agents`) and symlinking it into all three dirs — `install.sh` does the copy variant for portability to machines without this convention. The skill must be **tool-agnostic in its content** (it already is per ADR-0001 model-agnosticism); the body must not assume "you are Claude" — it speaks in roles and host operations.
+`install.sh` copies the skill into those locations by default and supports
+`--symlink` for development checkouts. The skill must be **tool-agnostic in its
+content** (it already is per ADR-0001 model-agnosticism); the body must not
+assume "you are Claude" — it speaks in roles and host operations.
 
 Frontmatter compatibility: both Claude and Codex read `name` + `description`. Codex additionally supports `metadata.short-description` and an `agents/openai.yaml`. We include the Codex extras (ignored harmlessly by Claude) so one folder serves all three.
 

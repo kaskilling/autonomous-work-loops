@@ -35,9 +35,3 @@ budgets:
   kill_retries: 2
   hosted_check_wait_seconds: 420
   require_human_approval_for_budget_increase: true
-
-# v2 evolution.enabled: false
-# v2 evidence.threshold: 3
-# v2 maintainer.enabled: false
-# v2 maintainer.schedule: ""
-# v2 maintainer.core_memory_path: ".agent-loops/core-memory.md"

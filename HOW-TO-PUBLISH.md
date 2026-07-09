@@ -1,14 +1,16 @@
 # How to Publish — simple step-by-step
 
-This is the practical checklist. For the *why* behind channel choices, see `PUBLISHING.md`. For the current proof record, see `build/GATE-RESULTS.md`.
+This is the practical checklist. For the *why* behind channel choices, see
+`PUBLISHING.md`. For installable release notes, see `docs/RELEASES.md`.
 
 ---
 
 ## Publishing Gate
 
 Before publishing a new channel or announcing a broader release, check
-`PUBLISHING.md` for the release posture and `build/GATE-RESULTS.md` for the
-current proof record. This file is only the mechanical checklist.
+`PUBLISHING.md` for the release posture and `docs/RELEASES.md` for the
+installable release record. Keep raw validation evidence in a non-public
+archive unless it has been sanitized.
 
 ---
 
@@ -23,7 +25,7 @@ gh repo create kaskilling/autonomous-work-loops --public --source=. --remote=ori
 
 Tag targeted-validation builds so installs can pin them:
 ```sh
-git tag v0.1.12 && git push origin v0.1.12
+git tag v0.1.13 && git push origin v0.1.13
 ```
 
 ---
@@ -36,7 +38,7 @@ Anyone clones and runs the installer. Works for all three tools.
 
 Tell users:
 ```sh
-git clone --branch v0.1.12 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.13 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -86,7 +88,7 @@ file to this one):
   "plugins": [
     {
       "name": "autonomous-work-loops",
-      "source": { "source": "git", "url": "https://github.com/kaskilling/autonomous-work-loops.git", "ref": "v0.1.12" },
+      "source": { "source": "git", "url": "https://github.com/kaskilling/autonomous-work-loops.git", "ref": "v0.1.13" },
       "category": "automation"
     }
   ]
@@ -96,7 +98,7 @@ file to this one):
 After that marketplace repository exists, users add its actual GitHub URL with
 `/plugin marketplace add ...`, then run `/plugin install autonomous-work-loops`.
 
-Pin `ref` to the **tag** (`v0.1.12`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
+Pin `ref` to the **tag** (`v0.1.13`), not a moving branch — this is autonomous code that runs with credentials, so updates should be deliberate.
 
 ### Channel E — Public discovery (the launch post)
 
@@ -114,6 +116,6 @@ announce it. Use the material already written:
 ## The one-paragraph version
 
 1. Keep strict-trust semantics author-only and committed.
-2. Treat live hosted-check routing as proven only by the green, PR-only red, and baseline-red rows in `build/GATE-RESULTS.md`.
+2. Treat live hosted-check routing as proven only by sanitized release evidence.
 3. Use the fresh-install smoke plus setup-and-arm live runs as the internal baseline.
 4. Ask one external user to repeat install and setup from a pinned tag before any broad public plugin or "leave it running" announcement.

@@ -387,7 +387,7 @@ guided_action_lines = (
 report = f"""# Autonomous Work Loops Bootstrap Report
 
 - Host: GitHub
-- Target repo path: {target}
+- Target repo path: local target repo; absolute path intentionally omitted
 - GitHub repo: {repo_name}
 - Default branch: {default_branch or '(not discovered)'}
 - Visibility: {visibility}
@@ -415,11 +415,11 @@ report = f"""# Autonomous Work Loops Bootstrap Report
 - Doctor: {doctor_text}
 - First trial issue: `.agent-loops/FIRST-TRIAL-ISSUE.md`
 - Normal setup command:
-  - one-command arm path: `{assets_dir}/bootstrap.sh --arm "{target}"`
+  - one-command arm path: `<skill-root>/assets/bootstrap.sh --arm "$PWD"`
   - rerun behavior: if `.agent-loops/` already exists, `--arm` resumes setup without creating another smoke issue
   - cleanup: successful first-run smoke artifacts are closed and the smoke branch is deleted after proof; failed smoke artifacts stay open for diagnosis
 - Recovery/debug commands:
-  - one-command guided path: `{assets_dir}/bootstrap.sh --guided "{target}"`
+  - one-command guided path: `<skill-root>/assets/bootstrap.sh --guided "$PWD"`
   - `gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready`
   - `.agent-loops/runners/local-supervisor.sh --once "$PWD"`
   - watch mode after the smoke test: `.agent-loops/runners/local-supervisor.sh --watch --interval 600 "$PWD"`
@@ -572,7 +572,7 @@ if [ "$guided" -eq 1 ]; then
   fi
   if [ "$supervisor_rc" -ne 0 ]; then
     if [ -n "$repo_slug" ]; then
-      failure_body="autonomous-work-loops guided setup created this smoke issue, but the one-shot supervisor exited with ${supervisor_rc} before the repo could be armed. Inspect .agent-loops/evidence/prove-the-gate/logs/ locally, then rerun .agent-loops/runners/local-supervisor.sh --status \"$target\" or bootstrap with --arm again after fixing setup."
+      failure_body="autonomous-work-loops guided setup created this smoke issue, but the one-shot supervisor exited with ${supervisor_rc} before the repo could be armed. Inspect .agent-loops/evidence/prove-the-gate/logs/ locally, then rerun .agent-loops/runners/local-supervisor.sh --status \"\$PWD\" or bootstrap with --arm again after fixing setup."
       (cd "$target" && gh issue comment "$smoke_issue" --repo "$repo_slug" --body "$failure_body" >/dev/null 2>&1 || true)
       (cd "$target" && gh issue edit "$smoke_issue" --repo "$repo_slug" --remove-label ready >/dev/null 2>&1 || true)
       (cd "$target" && gh issue edit "$smoke_issue" --repo "$repo_slug" --remove-label in-progress >/dev/null 2>&1 || true)

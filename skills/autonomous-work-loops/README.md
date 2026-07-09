@@ -76,5 +76,6 @@ AWL_ROLE_RUNNER="$PWD/.agent-loops/runners/claude.sh" .agent-loops/runners/local
 
 ## Read More
 
-The repository root README has the full operator path. Publishing and validation
-status live in `PUBLISHING.md` and `build/GATE-RESULTS.md`.
+The repository root README has the full operator path. Release posture lives in
+`PUBLISHING.md`; detailed gate evidence is kept outside the installed skill
+unless it has been sanitized.

@@ -43,7 +43,7 @@ guarded role runner.
 ## 2. Install The Skill
 
 ```sh
-git clone --branch v0.1.12 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.13 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```

@@ -32,14 +32,11 @@ Release-candidate proof:
    marketplace entry and loaded as enabled.
 5. Claude plugin validation and install passed from a clean temp `HOME` through
    a local marketplace entry, and `claude plugin details` showed the skill.
-6. A live fresh-smoke repo, `kaskilling/awl-live-smoke-20260706`, moved issue #1
-   to PR #2 with proof-passed and reviewer `ready-for-human` markers. The first
-   Codex role-runner attempt hit a local Codex state/app-server permission
-   blocker; the same supervisor recovered and converged with the generated
-   Claude role runner.
-7. Setup-and-arm live validation moved `Mohamad-Kamar/tts-compare` issue #1 to
-   PR #2, ingested external bot feedback, fixed it, and converged to
-   `ready-for-human`.
+6. A live fresh-smoke fixture moved a trusted issue to a proven PR with
+   proof-passed and reviewer `ready-for-human` markers. The supervisor also
+   exercised runner fallback and still converged.
+7. A setup-and-arm live validation ingested external bot feedback, fixed it,
+   and converged to `ready-for-human`.
 8. Hosted check routing passed live validation for green checks, PR-only red
    checks routed to `needs-fix`, and default-branch baseline-red checks routed
    to `ready-for-human-baseline-red`.
@@ -69,7 +66,7 @@ non-sandboxed surface.
 ### 1. Cross-tool (Claude + Codex + .agents) — plain git repo
 This repo is already shaped for it, and the clean temp-home proof passed. Users:
 ```sh
-git clone --branch v0.1.12 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.13 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -120,7 +117,7 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 
 ## Versioning
 
-- `plugin.json` is at `0.1.12`. Because historical checkpoint tag `v1.0.0`
+- `plugin.json` is at `0.1.13`. Because historical checkpoint tag `v1.0.0`
   already exists, publish the first installable v1 release as `v1.0.1` or
   another non-conflicting tag after the acceptance test passes on >=2 real repos.
 - Marketplace entries should pin a `sha`, not a moving `ref`, given the autonomy/credential surface — users should opt into updates deliberately.

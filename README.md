@@ -84,7 +84,7 @@ codex --version || claude --version
 Install this skill if it is not already installed:
 
 ```sh
-git clone --branch v0.1.12 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.13 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -246,4 +246,7 @@ For publishing notes, see [PUBLISHING.md](PUBLISHING.md).
 - [V1-QUICKSTART.md](V1-QUICKSTART.md) gives the operator setup path in more detail.
 - [DEVELOPER-EXPERIENCE.md](DEVELOPER-EXPERIENCE.md) shows what the daily loop feels like.
 - [design/](design/) contains the ADRs, glossary, ecosystem notes, and V2 target design.
-- [build/](build/) contains build plans, test results, and gate evidence.
+- [docs/RELEASES.md](docs/RELEASES.md) lists installable release notes.
+
+Detailed validation evidence is kept out of the public package unless it has
+been sanitized.
