@@ -687,6 +687,7 @@ Diff:
 ${diff}
 
 Review adversarially. Do not run git. Do not run gh. Do not edit files. Decide whether the current head has blocking defects relative to the issue and proof.
+Also decide whether the proof is relevant to the changed behavior. If the diff touches a surface with existing focused validation in this repo, such as browser/UI flows, persistence, routing, auth, build config, API contracts, or migration behavior, check whether the configured proof or hosted checks cover that risk. If an existing relevant focused check should have run but did not, treat that as a blocking validation gap. Do not require invented commands or newly-authored harnesses as accepted proof.
 
 Repository context:
 $(context_pack)
@@ -804,6 +805,7 @@ Issue body:
 ${body}
 
 Before editing, use targeted file reads or rg from the repository root to inspect the relevant source, tests, and repo instruction files listed above. Do not load unrelated large directory trees.
+Before exit, choose and run the narrowest existing repo-native validation that matches the behavior you changed. Start from the issue, changed files, package/build scripts, nearby tests, and repo docs. Examples of validation surfaces include unit tests, focused integration or E2E tests, lint/typecheck/build, migration checks, and small smoke commands already present in the repo. Do not invent or permanently change the accepted proof command; if a relevant existing validation cannot pass or cannot run, fix the problem or report that blocker plainly.
 
 Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Do not edit .agent-loops unless the issue explicitly requires it. Implement the smallest complete change and exit."
     prompt_log="${log%.log}-prompt.log"
@@ -1124,6 +1126,7 @@ Latest review/proof feedback:
 ${feedback}
 
 Before editing, use targeted file reads or rg from the repository root to inspect the relevant source, tests, and repo instruction files listed above. Do not load unrelated large directory trees.
+Before exit, choose and run the narrowest existing repo-native validation that matches the blocking defect and files you changed. Start from the reviewer feedback, changed files, package/build scripts, nearby tests, and repo docs. Examples of validation surfaces include unit tests, focused integration or E2E tests, lint/typecheck/build, migration checks, and small smoke commands already present in the repo. Do not invent or permanently change the accepted proof command; if a relevant existing validation cannot pass or cannot run, keep the blocker explicit instead of presenting the PR as fixed.
 
 Edit the working tree only. Do not run git. Do not run gh. Do not create commits, branches, PRs, labels, or marker comments. Fix the blocking defects needed for this cycle and exit."
     prompt_log="${log%.log}-prompt.log"

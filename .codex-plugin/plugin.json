@@ -1,6 +1,6 @@
 {
   "name": "autonomous-work-loops",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Bootstrap and run a reviewed, converging implement/review/fix PR loop for trusted GitHub issues.",
   "author": {
     "name": "mkamar"

@@ -43,7 +43,7 @@ guarded role runner.
 ## 2. Install The Skill
 
 ```sh
-git clone --branch v0.1.11 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.12 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -83,8 +83,8 @@ CLI equivalent:
 ```
 
 `--arm` creates or updates labels, runs doctor, preflights the role runner,
-creates the smoke issue, runs one one-shot supervisor tick, then starts managed
-background watch.
+creates the smoke issue, runs one one-shot supervisor tick, cleans up successful
+smoke artifacts, then starts managed background watch.
 
 Use guided setup without background watch when you want setup to stop after the
 smoke tick:
@@ -116,6 +116,9 @@ Confirm these fields in `.agent-loops/config.yaml`:
   `npm test` includes Playwright/E2E and `test:unit` exists, bootstrap uses the
   unit script as the first-smoke default and records the broader test command in
   `.agent-loops/BOOTSTRAP-REPORT.md`.
+- focused validation: roles should run existing repo-native checks that match
+  the changed behavior. Do not hard-code commands into AWL; derive them from
+  changed files, nearby tests, package/build scripts, and repo docs.
 - `trusted_actors`: includes the GitHub user who will author executable issues.
 - `trust_posture`: use `strict` for public or multi-contributor repos.
 - `labels`: keep defaults unless the repo already has a deliberate label scheme.
@@ -160,8 +163,11 @@ brew install coreutils
 
 ## 6. First Trial
 
-`--arm` and `--guided` create the first trial issue for you. For manual setup,
-use the generated issue body:
+`--arm` and `--guided` create the first trial issue for you. When the smoke
+issue reaches `ready-for-human` or `ready-for-human-baseline-red`, setup closes
+the smoke issue, closes the smoke PR, and requests deletion of the smoke branch.
+Failed smoke artifacts stay open for diagnosis. For manual setup, use the
+generated issue body:
 
 ```sh
 cat .agent-loops/FIRST-TRIAL-ISSUE.md

@@ -69,7 +69,7 @@ non-sandboxed surface.
 ### 1. Cross-tool (Claude + Codex + .agents) — plain git repo
 This repo is already shaped for it, and the clean temp-home proof passed. Users:
 ```sh
-git clone --branch v0.1.11 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.12 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -120,7 +120,7 @@ A short README GIF of the label board moving `ready → in-progress → ready-fo
 
 ## Versioning
 
-- `plugin.json` is at `0.1.11`. Because historical checkpoint tag `v1.0.0`
+- `plugin.json` is at `0.1.12`. Because historical checkpoint tag `v1.0.0`
   already exists, publish the first installable v1 release as `v1.0.1` or
   another non-conflicting tag after the acceptance test passes on >=2 real repos.
 - Marketplace entries should pin a `sha`, not a moving `ref`, given the autonomy/credential surface — users should opt into updates deliberately.

@@ -378,6 +378,7 @@ guided_action_lines = (
     "  - Doctor: run `.agent-loops/doctor.sh`\n"
     "  - Smoke issue: create from `.agent-loops/FIRST-TRIAL-ISSUE.md`\n"
     "  - Supervisor: run `.agent-loops/runners/local-supervisor.sh --once \"$PWD\"`\n"
+    "  - Smoke cleanup: on success, close smoke issue/PR artifacts and delete the smoke branch\n"
     + ("  - Managed watch: start `.agent-loops/runners/local-supervisor.sh --background \"$PWD\"`\n" if arm else "")
     if guided
     else "- Completed by setup: render `.agent-loops/` only; no GitHub mutation or supervisor tick requested"
@@ -416,6 +417,7 @@ report = f"""# Autonomous Work Loops Bootstrap Report
 - Normal setup command:
   - one-command arm path: `{assets_dir}/bootstrap.sh --arm "{target}"`
   - rerun behavior: if `.agent-loops/` already exists, `--arm` resumes setup without creating another smoke issue
+  - cleanup: successful first-run smoke artifacts are closed and the smoke branch is deleted after proof; failed smoke artifacts stay open for diagnosis
 - Recovery/debug commands:
   - one-command guided path: `{assets_dir}/bootstrap.sh --guided "{target}"`
   - `gh issue create --title "Add one tiny tested change to prove autonomous-work-loops is wired correctly" --body-file .agent-loops/FIRST-TRIAL-ISSUE.md --label ready`
@@ -553,10 +555,14 @@ if [ "$guided" -eq 1 ]; then
   (cd "$target" && "$dest/runners/local-supervisor.sh" --once "$target") || supervisor_rc=$?
   branch="loop/impl/issue-${smoke_issue}"
   pr_url=""
+  pr_number=""
   issue_labels=""
+  issue_label_names=""
   if [ -n "$repo_slug" ]; then
     pr_url="$(cd "$target" && gh pr list --repo "$repo_slug" --state all --head "$branch" --json url --jq '.[0].url // empty' 2>/dev/null || true)"
+    pr_number="$(cd "$target" && gh pr list --repo "$repo_slug" --state all --head "$branch" --json number --jq '.[0].number // empty' 2>/dev/null || true)"
     issue_labels="$(cd "$target" && gh issue view "$smoke_issue" --repo "$repo_slug" --json labels --jq '[.labels[].name] | join(", ")' 2>/dev/null || true)"
+    issue_label_names="$(cd "$target" && gh issue view "$smoke_issue" --repo "$repo_slug" --json labels --jq '.labels[].name' 2>/dev/null || true)"
   fi
   printf 'guided setup: issue #%s labels: %s\n' "$smoke_issue" "${issue_labels:-'(unknown)'}"
   if [ -n "$pr_url" ]; then
@@ -575,6 +581,33 @@ if [ "$guided" -eq 1 ]; then
     fi
     printf 'guided setup: supervisor exited with %s; setup needs attention before watch mode.\n' "$supervisor_rc" >&2
     exit "$supervisor_rc"
+  fi
+  if [ -n "$repo_slug" ] && printf '%s\n' "$issue_label_names" | grep -Eq '^(ready-for-human|ready-for-human-baseline-red)$'; then
+    cleanup_comment="autonomous-work-loops setup smoke succeeded and is being cleaned up. Future work starts from normal trusted issues labeled ready."
+    printf 'guided setup: cleaning successful smoke artifacts for issue #%s\n' "$smoke_issue"
+    default_branch="$(cd "$target" && git remote show origin 2>/dev/null | sed -n '/HEAD branch/s/.*: //p' || true)"
+    if [ -n "$default_branch" ]; then
+      (cd "$target" && git switch "$default_branch" >/dev/null 2>&1 || git switch -C "$default_branch" "origin/${default_branch}" >/dev/null 2>&1 || true)
+    fi
+    if [ -n "$pr_number" ]; then
+      (cd "$target" && gh pr close "$pr_number" --repo "$repo_slug" --comment "$cleanup_comment" --delete-branch >/dev/null 2>&1 || true)
+      printf 'guided setup: closed smoke PR #%s and requested branch deletion\n' "$pr_number"
+    else
+      (cd "$target" && git push origin --delete "$branch" >/dev/null 2>&1 || true)
+      printf 'guided setup: deleted smoke branch %s when present\n' "$branch"
+    fi
+    (cd "$target" && gh issue close "$smoke_issue" --repo "$repo_slug" --comment "$cleanup_comment" >/dev/null 2>&1 || true)
+    printf 'guided setup: closed smoke issue #%s\n' "$smoke_issue"
+    {
+      printf '\n## Smoke Cleanup\n\n'
+      printf '- Smoke issue: #%s closed after successful setup proof.\n' "$smoke_issue"
+      if [ -n "$pr_number" ]; then
+        printf '- Smoke PR: #%s closed after successful setup proof.\n' "$pr_number"
+      fi
+      printf '- Smoke branch: `%s` delete requested.\n' "$branch"
+    } >> "$dest/BOOTSTRAP-REPORT.md"
+  else
+    printf 'guided setup: leaving smoke artifacts open because setup did not reach a successful handoff label\n'
   fi
   if [ "$arm" -eq 1 ]; then
     printf 'guided setup: starting managed background supervisor\n'

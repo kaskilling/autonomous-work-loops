@@ -84,7 +84,7 @@ codex --version || claude --version
 Install this skill if it is not already installed:
 
 ```sh
-git clone --branch v0.1.11 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.12 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```
@@ -105,11 +105,11 @@ cd /path/to/target-repo
 ```
 
 `--arm` creates or updates labels, runs doctor, preflights the role runner,
-creates the first smoke issue, runs one supervisor tick, then starts managed
-background watch. If `.agent-loops/` already exists, `--arm` resumes the
-existing setup, avoids creating a duplicate smoke issue, and arms the
-supervisor. Use [V1-QUICKSTART.md](V1-QUICKSTART.md) for guided, manual,
-debug, and runner override commands.
+creates the first smoke issue, runs one supervisor tick, cleans up successful
+smoke artifacts, then starts managed background watch. If `.agent-loops/`
+already exists, `--arm` resumes the existing setup, avoids creating a duplicate
+smoke issue, and arms the supervisor. Use [V1-QUICKSTART.md](V1-QUICKSTART.md)
+for guided, manual, debug, and runner override commands.
 
 Use foreground watch when your agent harness cannot keep background child
 processes alive:
@@ -141,6 +141,9 @@ command to run from `.agent-loops/FIRST-TRIAL-ISSUE.md`.
 
 - `proof`: the configured test, build, or lint command that must pass before
   autonomous handoff.
+- `focused validation`: an existing repo-native check chosen from the changed
+  behavior, nearby tests, scripts, and docs. Implementer and Fixer run it when
+  relevant; Reviewer blocks when the configured proof is too weak for the risk.
 - `trusted actor`: a GitHub user allowed to create executable `ready` issues.
 - `supervisor`: the local process that runs implementer, reviewer, and fixer
   ticks.

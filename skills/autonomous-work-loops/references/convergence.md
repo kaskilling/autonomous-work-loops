@@ -32,6 +32,14 @@ At cap:
 
 Proof present and passing allows the reviewer to inspect the change, but hosted checks are still part of final handoff. Proof present and failing routes to `needs-fix`. Proof absent routes to `unproven`; no-proof repos never auto-converge under same-model review. Agent-added tests under an existing configured proof command count as normal proof. Inventing or changing the proof command itself is a human gate until accepted.
 
+Configured proof is the minimum gate, not the whole validation strategy.
+Implementer and Fixer should run the narrowest existing repo-native validation
+that matches the task and touched files before exiting. Reviewer should block
+handoff when the configured proof is too weak for the changed behavior and an
+existing focused validation path or hosted check should cover that risk. Do not
+hard-code framework-specific commands into AWL; derive focused validation from
+the target repo's scripts, tests, docs, and changed-file context.
+
 ## Hosted Check Rules
 
 Before setting a human-handoff label, the reviewer waits for hosted PR checks up to the configured wait budget.

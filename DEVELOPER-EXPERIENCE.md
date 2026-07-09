@@ -19,7 +19,7 @@ codex --version || claude --version
 Install a fixed copy of the skill from a tagged release:
 
 ```sh
-git clone --branch v0.1.11 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
+git clone --branch v0.1.12 --depth 1 https://github.com/kaskilling/autonomous-work-loops.git
 cd autonomous-work-loops
 ./skills/autonomous-work-loops/assets/install.sh
 ```

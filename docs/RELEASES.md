@@ -4,6 +4,7 @@ Use Git tags and GitHub releases for frozen states instead of committing copied 
 
 Installable release train:
 
+- `v0.1.12` - Adaptive validation guidance now tells roles to run repo-derived focused checks for touched behavior, and successful first-run smoke artifacts are cleaned up after setup proof.
 - `v0.1.11` - Public GitHub comments now use concise structured summaries, sanitize log excerpts, and keep runner-local prompt/proof/review/fixer paths out of PR and issue timelines.
 - `v0.1.10` - Supervisor status now includes foreground/watch activity plus a current-work snapshot with issue, PR, phase, role, verdict, hosted checks, and next action.
 - `v0.1.9` - Documentation cleanup: pinned copy install by default, explicit plugin invocation notes, current prerequisites, and clearer release-marker guidance.
